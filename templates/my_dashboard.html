@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+
+{% block content %}
+
+{# ── All new styles live HERE so Jinja always renders them ── #}
+<style>
+.d-layout{display:grid;grid-template-columns:268px 1fr;gap:20px;align-items:start;animation:d-up .35s ease both;}
+@keyframes d-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Profile card */
+.d-profile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:80px;}
+.d-banner{height:62px;background:linear-gradient(135deg,var(--brand) 0%,#f07a64 58%,#f9b4a2 100%);position:relative;}
+.d-banner::after{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.14) 1px,transparent 1px);background-size:18px 18px;}
+.d-av-wrap{position:absolute;bottom:-23px;left:16px;}
+.d-av{width:48px;height:48px;border-radius:50%;background:var(--sidebar-bg);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;border:3px solid var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.18);}
+.d-pb{padding:30px 16px 16px;}
+.d-pname{font-size:15px;font-weight:700;color:var(--text-1);}
+.d-ppos{font-size:12px;color:var(--text-3);margin-top:2px;}
+.d-dept{display:inline-flex;align-items:center;gap:4px;margin-top:8px;background:var(--purple-bg);color:var(--purple);font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.03em;}
+.d-div{border:none;border-top:1px solid var(--border-light);margin:12px 0;}
+.d-mr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+.d-ml{font-size:10.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;flex-shrink:0;}
+.d-mv{font-size:12px;font-weight:600;color:var(--text-2);text-align:right;word-break:break-all;}
+.d-eid{font-family:var(--mono);font-size:11px;color:var(--text-3);background:var(--bg);padding:2px 7px;border-radius:5px;}
+.d-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px;}
+.d-chip-on{background:var(--green-bg);color:var(--green);}
+.d-chip-off{background:var(--red-bg);color:var(--red);}
+.d-chipdot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.d-ebtn{display:block;width:100%;padding:9px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;text-align:center;text-decoration:none;cursor:pointer;margin-top:14px;transition:background 200ms,transform 120ms,box-shadow 200ms;}
+.d-ebtn:hover{background:var(--brand-light);transform:translateY(-1px);box-shadow:0 4px 12px var(--brand-glow);}
+.d-ebtn:active{transform:translateY(0);}
+
+/* Right column */
+.d-right{display:flex;flex-direction:column;gap:16px;}
+.d-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.d-sg{ --card-accent:var(--green);  --card-bg:var(--green-bg);  }
+.d-sr{ --card-accent:var(--red);    --card-bg:var(--red-bg);    }
+.d-sa{ --card-accent:var(--amber);  --card-bg:var(--amber-bg);  }
+.d-sb{ --card-accent:var(--brand);  --card-bg:var(--brand-dim); }
+.d-sv{font-size:18px !important;letter-spacing:-.3px;}
+
+/* Mid row */
+.d-mid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+/* Section header */
+.d-sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.d-st{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:6px;}
+.d-sd{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.d-sl{font-size:11.5px;font-weight:600;color:var(--brand);text-decoration:none;}
+.d-sl:hover{text-decoration:underline;}
+
+/* Performance */
+.d-pg{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.d-pi{background:var(--bg);border-radius:var(--radius);padding:10px 12px;}
+.d-pl{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+.d-pv{font-size:20px;font-weight:700;font-family:var(--mono);line-height:1;}
+.d-pt{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden;}
+.d-pf{height:100%;border-radius:2px;}
+.d-po{background:var(--sidebar-bg);border-radius:var(--radius);padding:10px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.d-pol{font-size:9.5px;font-weight:600;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;}
+.d-pov{font-size:28px;font-weight:700;color:#fff;font-family:var(--mono);line-height:1;margin:4px 0 1px;}
+.d-pos{font-size:10px;color:rgba(255,255,255,.3);}
+
+/* Quick actions */
+.d-qal{display:flex;flex-direction:column;gap:6px;}
+.d-qa{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius);text-decoration:none;color:var(--text-2);font-size:13px;font-weight:500;transition:background 140ms,border-color 140ms,transform 100ms;}
+.d-qa:hover{background:var(--border-light);border-color:var(--border);transform:translateX(2px);}
+.d-qi{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.d-qa-arr{margin-left:auto;color:var(--text-3);font-size:13px;transition:transform 120ms;}
+.d-qa:hover .d-qa-arr{transform:translateX(3px);}
+.d-qa-p{background:var(--brand);border-color:transparent;color:#fff;}
+.d-qa-p:hover{background:var(--brand-light);transform:translateX(2px);}
+.d-qa-p .d-qa-arr{color:rgba(255,255,255,.65);}
+.d-qa-p .d-qi{background:rgba(255,255,255,.2);}
+
+/* Announcements */
+.d-ai{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border-light);}
+.d-ai:last-child{border-bottom:none;}
+.d-ap{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;flex-shrink:0;margin-top:2px;white-space:nowrap;}
+.d-ap-h{background:var(--red-bg);color:var(--red);}
+.d-ap-n{background:var(--blue-bg);color:var(--blue);}
+.d-at{font-size:13px;font-weight:600;color:var(--text-1);line-height:1.3;}
+.d-ab{font-size:12px;color:var(--text-3);margin-top:3px;line-height:1.5;}
+</style>
+
+{% if emp %}
+<div class="d-layout">
+
+  <!-- ═══ PROFILE CARD ═══ -->
+  <div class="d-profile">
+    <div class="d-banner">
+      <div class="d-av-wrap">
+        <div class="d-av">{{ emp.name[0] }}</div>
+      </div>
+    </div>
+    <div class="d-pb">
+      <div class="d-pname">{{ emp.name }}</div>
+      <div class="d-ppos">{{ emp.position or '—' }}</div>
+      <div class="d-dept">◆ {{ emp.dept_name }}</div>
+
+      <hr class="d-div">
+
+      <div class="d-mr">
+        <span class="d-ml">ID</span>
+        <span class="d-eid">EMP-{{ "%04d"|format(emp.employee_id) }}</span>
+      </div>
+      <div class="d-mr">
+        <span class="d-ml">Email</span>
+        <span class="d-mv" style="font-size:11px;">{{ emp.email or '—' }}</span>
+      </div>
+      <div class="d-mr">
+        <span class="d-ml">Phone</span>
+        <span class="d-mv">{{ emp.phone or '—' }}</span>
+      </div>
+      <div class="d-mr">
+        <span class="d-ml">Joined</span>
+        <span class="d-mv">{{ emp.join_date or '—' }}</span>
+      </div>
+      <div class="d-mr">
+        <span class="d-ml">Status</span>
+        <span class="d-chip {{ 'd-chip-on' if emp.status=='Active' else 'd-chip-off' }}">
+          <span class="d-chipdot"></span>{{ emp.status }}
+        </span>
+      </div>
+      <div class="d-mr">
+        <span class="d-ml">Base Pay</span>
+        <span class="d-mv" style="color:var(--text-1);">₹{{ "{:,.0f}".format(emp.base_salary) }}</span>
+      </div>
+
+      <a href="{{ url_for('profile') }}" class="d-ebtn">Edit Profile →</a>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT COLUMN ═══ -->
+  <div class="d-right">
+
+    <!-- Stat cards (reuse base .stat-card, .stat-icon, .stat-value, .stat-label) -->
+    <div class="d-stats">
+      <div class="stat-card d-sg">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value">{{ att.present if att else 0 }}</div>
+        <div class="stat-label">Days Present</div>
+      </div>
+      <div class="stat-card d-sr">
+        <div class="stat-icon">❌</div>
+        <div class="stat-value">{{ att.absent if att else 0 }}</div>
+        <div class="stat-label">Days Absent</div>
+      </div>
+      <div class="stat-card d-sa">
+        <div class="stat-icon">🌿</div>
+        <div class="stat-value">{{ (cl.total_cl - cl.used_cl) if cl else 12 }}</div>
+        <div class="stat-label">CL Remaining</div>
+      </div>
+      <div class="stat-card d-sb">
+        <div class="stat-icon">💰</div>
+        <div class="stat-value d-sv">{{ '₹'+"{:,.0f}".format(payroll.net_salary) if payroll else '—' }}</div>
+        <div class="stat-label">Net This Month</div>
+      </div>
+    </div>
+
+    <!-- Performance + Quick Actions -->
+    <div class="d-mid">
+
+      <!-- Performance -->
+      <div class="chart-card">
+        <div class="d-sh">
+          <div class="d-st">
+            <span class="d-sd" style="background:var(--purple);"></span>Performance
+          </div>
+          <span style="font-size:11px;color:var(--text-3);">Latest review</span>
+        </div>
+        {% if perf %}
+        <div class="d-pg">
+          {% for label, val, clr in [
+            ('Punctuality', perf.punctuality,     '#059669'),
+            ('Tasks',       perf.task_completion, '#2563eb'),
+            ('Teamwork',    perf.teamwork,         '#7c3aed'),
+            ('Comms',       perf.communication,    '#b45309'),
+            ('Initiative',  perf.initiative,       '#dc2626')
+          ] %}
+          <div class="d-pi">
+            <div class="d-pl">{{ label }}</div>
+            <div class="d-pv" style="color:{{ clr }};">{{ val }}</div>
+            <div class="d-pt"><div class="d-pf" style="width:{{ val }}%;background:{{ clr }};opacity:.75;"></div></div>
+          </div>
+          {% endfor %}
+          <div class="d-po">
+            <div class="d-pol">Overall</div>
+            <div class="d-pov">{{ perf.overall_rating }}</div>
+            <div class="d-pos">/ 100</div>
+          </div>
+        </div>
+        {% else %}
+        <p style="color:var(--text-3);text-align:center;padding:28px 0;font-size:13px;">No performance review yet.</p>
+        {% endif %}
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="chart-card">
+        <div class="d-sh">
+          <div class="d-st">
+            <span class="d-sd" style="background:var(--brand);"></span>Quick Actions
+          </div>
+        </div>
+        <div class="d-qal">
+          <a href="{{ url_for('leaves') }}" class="d-qa d-qa-p">
+            <span class="d-qi">🌿</span>Apply for Leave<span class="d-qa-arr">→</span>
+          </a>
+          <a href="{{ url_for('my_payslip') }}" class="d-qa">
+            <span class="d-qi" style="background:var(--amber-bg);">💰</span>View My Payslip<span class="d-qa-arr">→</span>
+          </a>
+          <a href="{{ url_for('my_attendance') }}" class="d-qa">
+            <span class="d-qi" style="background:var(--blue-bg);">📅</span>Attendance Log<span class="d-qa-arr">→</span>
+          </a>
+          <a href="{{ url_for('performance') }}" class="d-qa">
+            <span class="d-qi" style="background:var(--purple-bg);">📈</span>Performance Report<span class="d-qa-arr">→</span>
+          </a>
+          <a href="{{ url_for('announcements') }}" class="d-qa">
+            <span class="d-qi" style="background:var(--green-bg);">📢</span>Announcements<span class="d-qa-arr">→</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Announcements -->
+    {% if anns %}
+    <div class="chart-card">
+      <div class="d-sh">
+        <div class="d-st">
+          <span class="d-sd" style="background:var(--blue);"></span>Latest Announcements
+        </div>
+        <a href="{{ url_for('announcements') }}" class="d-sl">View all →</a>
+      </div>
+      {% for a in anns %}
+      <div class="d-ai">
+        <span class="d-ap {{ 'd-ap-h' if a.priority=='High' else 'd-ap-n' }}">{{ a.priority }}</span>
+        <div>
+          <div class="d-at">{{ a.title }}</div>
+          <div class="d-ab">{{ a.body[:110] }}{% if a.body|length > 110 %}…{% endif %}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% else %}
+<div class="chart-card" style="text-align:center;padding:48px;">
+  <p style="color:var(--text-3);font-size:14px;">No employee profile linked to this account.</p>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}My Attendance{% endblock %}
+{% block page_title %}My Attendance{% endblock %}
+
+{% block content %}
+<style>
+/* ── Page entrance ───────────────────────────────────────── */
+@keyframes at-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.at-page{animation:at-up .35s ease both;}
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.at-filter{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow);
+  padding:14px 20px;margin-bottom:20px;gap:16px;flex-wrap:wrap;
+}
+.at-filter-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.at-filter-label{font-size:12px;font-weight:600;color:var(--text-3);white-space:nowrap;}
+.at-sel{
+  padding:7px 12px;border:1px solid var(--border);border-radius:8px;
+  font-family:var(--font);font-size:13px;color:var(--text-1);
+  background:var(--bg);cursor:pointer;outline:none;
+  transition:border-color var(--anim),box-shadow var(--anim);
+}
+.at-sel:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-glow);}
+.at-filter-title{font-size:15px;font-weight:700;color:var(--text-1);}
+.at-filter-sub{font-size:12px;color:var(--text-3);margin-top:1px;}
+
+/* ── Stat cards ──────────────────────────────────────────── */
+.at-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+/* reuse base .stat-card, override accent via CSS vars */
+.at-sg{--card-accent:var(--green); --card-bg:var(--green-bg);}
+.at-sr{--card-accent:var(--red);   --card-bg:var(--red-bg);}
+.at-sa{--card-accent:var(--amber); --card-bg:var(--amber-bg);}
+.at-sp{--card-accent:var(--purple);--card-bg:var(--purple-bg);}
+
+/* ── Calendar heatmap strip ──────────────────────────────── */
+.at-calendar-wrap{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow);
+  padding:18px 20px;margin-bottom:20px;
+}
+.at-cal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.at-cal-title{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:6px;}
+.at-cal-dot{width:6px;height:6px;border-radius:50%;background:var(--brand);}
+.at-cal-legend{display:flex;align-items:center;gap:14px;}
+.at-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-3);}
+.at-leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+
+.at-cal-grid{display:flex;flex-wrap:wrap;gap:5px;}
+.at-day{
+  width:28px;height:28px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10.5px;font-weight:600;cursor:default;
+  position:relative;transition:transform .12s;
+}
+.at-day:hover{transform:scale(1.15);z-index:2;}
+.at-day-present{background:var(--green-bg);color:var(--green);}
+.at-day-absent {background:var(--red-bg);  color:var(--red);}
+.at-day-leave  {background:var(--amber-bg);color:var(--amber);}
+.at-day-weekend{background:var(--border-light);color:var(--text-3);}
+.at-day-future {background:var(--border-light);color:var(--border);cursor:default;}
+
+/* ── Table card ──────────────────────────────────────────── */
+.at-table-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;
+}
+.at-table-hd{
+  padding:14px 20px;border-bottom:1px solid var(--border-light);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.at-table-title{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:6px;}
+.at-table-dot{width:6px;height:6px;border-radius:50%;}
+.at-search{
+  padding:6px 12px;border:1px solid var(--border);border-radius:8px;
+  font-family:var(--font);font-size:12px;color:var(--text-1);background:var(--bg);
+  outline:none;width:180px;transition:border-color var(--anim),box-shadow var(--anim);
+}
+.at-search:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-glow);}
+
+/* Table overrides – keep base styles, tweak row details */
+.at-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.at-tbl thead th{
+  text-align:left;padding:10px 16px;
+  color:var(--text-3);font-weight:600;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.06em;
+  border-bottom:1px solid var(--border-light);background:#fafbfc;
+  white-space:nowrap;
+}
+.at-tbl tbody tr{border-bottom:1px solid var(--border-light);transition:background var(--anim);}
+.at-tbl tbody tr:last-child{border-bottom:none;}
+.at-tbl tbody tr:hover{background:var(--bg);}
+.at-tbl td{padding:10px 16px;color:var(--text-2);vertical-align:middle;}
+
+/* Date cell */
+.at-date-cell{display:flex;flex-direction:column;}
+.at-date-main{font-weight:600;color:var(--text-1);font-size:13px;}
+.at-date-day {font-size:10.5px;color:var(--text-3);margin-top:1px;}
+
+/* Time chip */
+.at-time{
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text-2);
+  background:var(--bg);padding:3px 8px;border-radius:6px;
+  border:1px solid var(--border-light);
+}
+.at-time-dot{width:5px;height:5px;border-radius:50%;}
+
+/* Hours pill */
+.at-hrs{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:12px;font-weight:600;color:var(--green);
+  background:var(--green-bg);padding:3px 9px;border-radius:20px;
+}
+
+/* Weekend row dimming */
+.at-row-weekend td{opacity:.5;}
+.at-row-weekend{background:var(--border-light) !important;}
+
+/* ── Summary footer bar ──────────────────────────────────── */
+.at-footer{
+  display:flex;align-items:center;gap:20px;
+  padding:12px 20px;background:#fafbfc;
+  border-top:1px solid var(--border-light);
+  flex-wrap:wrap;
+}
+.at-footer-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3);}
+.at-footer-val{font-weight:700;color:var(--text-1);font-family:var(--mono);}
+</style>
+
+{% if emp or records is defined %}
+<div class="at-page">
+
+  <!-- ── Filter bar ── -->
+  <div class="at-filter">
+    <div>
+      <div class="at-filter-title">{{ emp.name if emp else '' }} — Attendance</div>
+      <div class="at-filter-sub">{{ month_name }} {{ year }}</div>
+    </div>
+    <div class="at-filter-left">
+      <span class="at-filter-label">Month</span>
+      <form method="GET" id="attForm" style="display:contents;">
+        <select name="month" class="at-sel" onchange="document.getElementById('attForm').submit()">
+          {% for m in months %}
+          <option value="{{ loop.index }}" {% if loop.index==month %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <span class="at-filter-label">Year</span>
+        <select name="year" class="at-sel" onchange="document.getElementById('attForm').submit()">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary" style="padding:7px 16px;">View</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Stat cards ── -->
+  <div class="at-stats">
+    <div class="stat-card at-sg">
+      <div class="stat-icon">✅</div>
+      <div class="stat-value">{{ summary.present or 0 }}</div>
+      <div class="stat-label">Days Present</div>
+    </div>
+    <div class="stat-card at-sr">
+      <div class="stat-icon">❌</div>
+      <div class="stat-value">{{ summary.absent or 0 }}</div>
+      <div class="stat-label">Days Absent</div>
+    </div>
+    <div class="stat-card at-sa">
+      <div class="stat-icon">🌿</div>
+      <div class="stat-value">{{ summary.on_leave or 0 }}</div>
+      <div class="stat-label">On Leave</div>
+    </div>
+    <div class="stat-card at-sp">
+      <div class="stat-icon">📊</div>
+      <div class="stat-value">
+        {% if summary.total and summary.total > 0 %}
+          {{ ((summary.present / summary.total) * 100) | int }}%
+        {% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Attendance Rate</div>
+    </div>
+  </div>
+
+  <!-- ── Calendar heatmap ── -->
+  {% if records %}
+  <div class="at-calendar-wrap">
+    <div class="at-cal-hd">
+      <div class="at-cal-title">
+        <span class="at-cal-dot"></span>Monthly Overview — {{ month_name }} {{ year }}
+      </div>
+      <div class="at-cal-legend">
+        <div class="at-leg-item"><span class="at-leg-dot" style="background:var(--green-bg);border:1px solid var(--green);"></span>Present</div>
+        <div class="at-leg-item"><span class="at-leg-dot" style="background:var(--red-bg);border:1px solid var(--red);"></span>Absent</div>
+        <div class="at-leg-item"><span class="at-leg-dot" style="background:var(--amber-bg);border:1px solid var(--amber);"></span>Leave</div>
+        <div class="at-leg-item"><span class="at-leg-dot" style="background:var(--border-light);border:1px solid var(--border);"></span>Weekend</div>
+      </div>
+    </div>
+    <div class="at-cal-grid" id="calGrid"></div>
+  </div>
+  {% endif %}
+
+  <!-- ── Records table ── -->
+  <div class="at-table-card">
+    <div class="at-table-hd">
+      <div class="at-table-title">
+        <span class="at-table-dot" style="background:var(--blue);"></span>
+        Daily Records
+      </div>
+      <input type="text" class="at-search" placeholder="Filter date or status…" id="attSearch">
+    </div>
+
+    <table class="at-tbl" id="attTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Day</th>
+          <th>Status</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        {% set dow = r.date | string %}
+        <tr class="at-row {{ 'at-row-weekend' if r.status == 'Weekend' else '' }}" data-search="{{ r.date }} {{ r.status }}">
+          <td>
+            <div class="at-date-cell">
+              <span class="at-date-main">{{ r.date }}</span>
+            </div>
+          </td>
+          <td style="color:var(--text-3);font-size:12px;">—</td>
+          <td>
+            <span class="badge badge-{{ 'green' if r.status=='Present' else ('orange' if r.status=='Leave' else 'red') }}">
+              {{ r.status }}
+            </span>
+          </td>
+          <td>
+            {% if r.check_in %}
+            <span class="at-time">
+              <span class="at-time-dot" style="background:var(--green);"></span>
+              {{ r.check_in }}
+            </span>
+            {% else %}
+            <span style="color:var(--text-3);font-size:12px;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.check_out %}
+            <span class="at-time">
+              <span class="at-time-dot" style="background:var(--red);"></span>
+              {{ r.check_out }}
+            </span>
+            {% else %}
+            <span style="color:var(--text-3);font-size:12px;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.check_in and r.check_out %}
+            <span class="at-hrs">⏱ 9 hrs</span>
+            {% else %}
+            <span style="color:var(--text-3);font-size:12px;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-row">No attendance records for this month.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Footer summary -->
+    <div class="at-footer">
+      <div class="at-footer-item">
+        Total working days: <span class="at-footer-val">{{ summary.total or 0 }}</span>
+      </div>
+      <div class="at-footer-item">
+        Present: <span class="at-footer-val" style="color:var(--green);">{{ summary.present or 0 }}</span>
+      </div>
+      <div class="at-footer-item">
+        Absent: <span class="at-footer-val" style="color:var(--red);">{{ summary.absent or 0 }}</span>
+      </div>
+      <div class="at-footer-item">
+        On Leave: <span class="at-footer-val" style="color:var(--amber);">{{ summary.on_leave or 0 }}</span>
+      </div>
+      {% if summary.total and summary.total > 0 %}
+      <div class="at-footer-item" style="margin-left:auto;">
+        Rate: <span class="at-footer-val" style="color:var(--brand);">{{ ((summary.present / summary.total) * 100) | int }}%</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Live search filter ─────────────────────────────────── */
+document.getElementById('attSearch').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#attTable tbody tr.at-row').forEach(row => {
+    const txt = (row.dataset.search || '').toLowerCase();
+    row.style.display = txt.includes(q) ? '' : 'none';
+  });
+});
+
+/* ── Calendar heatmap builder ──────────────────────────── */
+(function() {
+  const grid = document.getElementById('calGrid');
+  if (!grid) return;
+
+  // Build a lookup from the table rows
+  const statusMap = {};
+  document.querySelectorAll('#attTable tbody tr.at-row').forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (!cells.length) return;
+    const dateStr = cells[0].querySelector('.at-date-main')?.textContent?.trim();
+    const badge   = cells[2].querySelector('.badge');
+    const status  = badge ? badge.textContent.trim() : '';
+    if (dateStr) statusMap[dateStr] = status;
+  });
+
+  // Determine year/month from Jinja-rendered values embedded below
+  const year  = parseInt('{{ year }}', 10);
+  const month = parseInt('{{ month }}', 10); // 1-based
+
+  const firstDay  = new Date(year, month - 1, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  // Day labels row
+  const dayNames = ['S','M','T','W','T','F','S'];
+  dayNames.forEach(d => {
+    const el = document.createElement('div');
+    el.style.cssText = 'width:28px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--text-3);letter-spacing:.04em;';
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  // Padding for first week
+  for (let i = 0; i < firstDay; i++) {
+    const blank = document.createElement('div');
+    blank.style.cssText = 'width:28px;height:28px;';
+    grid.appendChild(blank);
+  }
+
+  // Day cells
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, month - 1, day);
+    const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+
+    // Build YYYY-MM-DD string matching Jinja r.date format
+    const mm  = String(month).padStart(2, '0');
+    const dd  = String(day).padStart(2, '0');
+    const key = `${year}-${mm}-${dd}`;
+
+    const status = statusMap[key] || '';
+    const el = document.createElement('div');
+    el.className = 'at-day';
+    el.textContent = day;
+
+    if (isWeekend) {
+      el.classList.add('at-day-weekend');
+      el.title = 'Weekend';
+    } else if (status === 'Present') {
+      el.classList.add('at-day-present');
+      el.title = `${key} — Present`;
+    } else if (status === 'Absent') {
+      el.classList.add('at-day-absent');
+      el.title = `${key} — Absent`;
+    } else if (status === 'Leave') {
+      el.classList.add('at-day-leave');
+      el.title = `${key} — Leave`;
+    } else {
+      el.classList.add('at-day-weekend');
+    }
+
+    grid.appendChild(el);
+  }
+})();
+</script>
+{% endblock %}

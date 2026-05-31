@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ emp.name }} — Performance{% endblock %}
+{% block page_title %}{{ emp.name }}'s Performance{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('performance') }}" class="btn btn-outline" style="margin-bottom:20px;">← Back</a>
+
+<div class="chart-card" style="margin-bottom:20px;">
+  <div class="chart-header"><h3>Rating Trend Over Time</h3></div>
+  <canvas id="empTrend" height="120"></canvas>
+</div>
+
+<div class="table-card">
+  <div class="table-header"><h3>All Reviews</h3></div>
+  <table class="data-table">
+    <thead>
+      <tr><th>Month/Year</th><th>Punctuality</th><th>Tasks</th><th>Teamwork</th><th>Comm.</th><th>Initiative</th><th>Overall</th><th>Remarks</th><th>Reviewed By</th></tr>
+    </thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.month }}/{{ r.year }}</td>
+        <td>{{ r.punctuality }}%</td>
+        <td>{{ r.task_completion }}%</td>
+        <td>{{ r.teamwork }}%</td>
+        <td>{{ r.communication }}%</td>
+        <td>{{ r.initiative }}%</td>
+        <td>
+          <div class="score-pill score-{{ 'high' if r.overall_rating >= 80 else ('mid' if r.overall_rating >= 60 else 'low') }}">
+            {{ r.overall_rating }}
+          </div>
+        </td>
+        <td>{{ r.remarks or '—' }}</td>
+        <td>{{ r.reviewed_by or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="empty-row">No performance records found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const trend = {{ trend|safe }};
+new Chart(document.getElementById('empTrend'), {
+  type: 'line',
+  data: {
+    labels: trend.map(t => t.month),
+    datasets: [{
+      label: 'Rating',
+      data: trend.map(t => t.rating),
+      borderColor: '#7F77DD',
+      backgroundColor: 'rgba(127,119,221,0.1)',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#fff',
+      pointBorderColor: '#7F77DD',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      tension: 0.4,
+      fill: true
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 100, grid: { color: '#f0f0f0' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}

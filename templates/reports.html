@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Reports & Exports{% endblock %}
+{% block page_title %}Reports & Exports{% endblock %}
+
+{% block content %}
+<div class="charts-row" style="align-items:flex-start;flex-wrap:wrap;">
+
+  <!-- ── PDF Payslips ─────────────────────────────────────────────────── -->
+  <div class="chart-card" style="flex:1;min-width:280px;">
+    <div class="chart-header">
+      <h3>📄 Generate Payslip (PDF)</h3>
+    </div>
+    <p style="color:#888;font-size:13px;margin-bottom:16px;">
+      Generate a professional PDF payslip for any employee for any month.
+    </p>
+    <div class="form-group">
+      <label>Employee</label>
+      <select id="ps_emp" class="form-input">
+        {% for e in employees %}
+        <option value="{{ e.employee_id }}">{{ e.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="form-group">
+        <label>Month</label>
+        <select id="ps_month" class="form-input">
+          {% for m in months %}
+          <option value="{{ loop.index }}" {% if loop.index == now.month %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Year</label>
+        <select id="ps_year" class="form-input">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y == now.year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="info-box" style="margin-bottom:12px;">
+      ℹ️ Make sure payroll is calculated first (Payroll page → Calculate & Load).
+    </div>
+    <a id="payslipBtn" href="#" onclick="downloadPayslip(event)"
+       class="btn btn-primary btn-full">⬇ Download PDF Payslip</a>
+  </div>
+
+  <!-- ── Excel Payroll Report ─────────────────────────────────────────── -->
+  <div class="chart-card" style="flex:1;min-width:280px;">
+    <div class="chart-header">
+      <h3>📊 Payroll Report (Excel)</h3>
+    </div>
+    <p style="color:#888;font-size:13px;margin-bottom:16px;">
+      Download a full payroll + attendance summary Excel sheet with formatted tables and totals.
+    </p>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="form-group">
+        <label>Month</label>
+        <select id="xl_month" class="form-input">
+          {% for m in months %}
+          <option value="{{ loop.index }}" {% if loop.index == now.month %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Year</label>
+        <select id="xl_year" class="form-input">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y == now.year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="info-box" style="margin-bottom:12px;">
+      ℹ️ The Excel file includes two sheets: Payroll Summary and Attendance Summary.
+    </div>
+    <a id="excelBtn" href="#" onclick="downloadExcel(event)"
+       class="btn btn-primary btn-full" style="background:#1D9E75;">⬇ Download Excel Report</a>
+  </div>
+
+</div>
+
+<!-- ── What's in each export ──────────────────────────────────────────── -->
+<div class="charts-row" style="margin-top:20px;">
+  <div class="chart-card" style="flex:1;">
+    <div class="chart-header"><h3>PDF Payslip includes:</h3></div>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;padding:0;">
+      {% for item in ["Company header with PayrollPro branding",
+                      "Employee name, ID, department, designation",
+                      "Pay period and working days breakdown",
+                      "Earnings table (basic pay, overtime)",
+                      "Deductions table (absent deductions)",
+                      "Net salary banner in green",
+                      "Auto-generated date and footer"] %}
+      <li style="display:flex;gap:10px;font-size:13px;color:#444;">
+        <span style="color:#1D9E75;font-weight:700;">✓</span> {{ item }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="chart-card" style="flex:1;">
+    <div class="chart-header"><h3>Excel Report includes:</h3></div>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;padding:0;">
+      {% for item in ["Sheet 1: Full payroll — all employees",
+                      "Columns: Name, Dept, Basic Pay, Overtime, Deductions, Net Salary",
+                      "Totals row auto-calculated",
+                      "Sheet 2: Attendance summary per employee",
+                      "Attendance % highlighted red if below 75%",
+                      "Color-coded rows (alternating bands)",
+                      "Professional PayrollPro header and branding"] %}
+      <li style="display:flex;gap:10px;font-size:13px;color:#444;">
+        <span style="color:#7F77DD;font-weight:700;">✓</span> {{ item }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function downloadPayslip(e) {
+  e.preventDefault();
+  const emp   = document.getElementById('ps_emp').value;
+  const month = document.getElementById('ps_month').value;
+  const year  = document.getElementById('ps_year').value;
+  window.location.href = `/reports/payslip/${emp}/${month}/${year}`;
+}
+function downloadExcel(e) {
+  e.preventDefault();
+  const month = document.getElementById('xl_month').value;
+  const year  = document.getElementById('xl_year').value;
+  window.location.href = `/reports/excel/${month}/${year}`;
+}
+</script>
+{% endblock %}

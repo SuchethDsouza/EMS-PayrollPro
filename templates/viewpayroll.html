@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+{% block title %}View Payroll{% endblock %}
+{% block page_title %}View Payroll{% endblock %}
+
+{% block content %}
+<style>
+.vp-root * { box-sizing: border-box; }
+.vp-root { font-family: 'DM Sans', sans-serif; }
+
+/* ── Top bar ── */
+.vp-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.vp-title { font-size: 16px; font-weight: 700; color: #18181b; }
+.vp-meta  { font-size: 13px; color: #6b7280; }
+.vp-period-badge {
+  background: #f0f0ff;
+  color: #4f46e5;
+  border: 1px solid #c7c4f8;
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Summary KPI strip ── */
+.vp-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.vp-kpi {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-radius: 12px;
+  padding: 14px 18px;
+  border-top: 3px solid var(--kc, #4f46e5);
+}
+.vp-kpi-val  { font-size: 22px; font-weight: 700; color: #18181b; font-family: 'DM Mono', monospace; line-height: 1; }
+.vp-kpi-lbl  { font-size: 11.5px; color: #9ca3af; margin-top: 4px; font-weight: 500; }
+
+/* ── Table card ── */
+.vp-card {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.vp-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f5;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vp-card-title { font-size: 14px; font-weight: 600; color: #18181b; }
+
+/* Bulk pay button */
+.btn-bulk-pay {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 8px;
+  background: #18181b;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-bulk-pay:hover { background: #333; }
+
+.vp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vp-table thead th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 1px solid #f0f0f5;
+  background: #fafafa;
+  white-space: nowrap;
+}
+.vp-table tbody tr { border-bottom: 1px solid #f5f5f8; transition: background .1s; }
+.vp-table tbody tr:last-child { border-bottom: none; }
+.vp-table tbody tr:hover { background: #fafafa; }
+.vp-table td { padding: 12px 16px; vertical-align: middle; }
+
+/* Employee cell */
+.emp-cell { display: flex; align-items: center; gap: 10px; }
+.emp-av {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.av-0{background:#6366f1} .av-1{background:#f59e0b} .av-2{background:#10b981}
+.av-3{background:#ef4444} .av-4{background:#3b82f6} .av-5{background:#8b5cf6}
+.emp-name { font-weight: 600; color: #18181b; font-size: 13px; }
+.emp-pos  { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+
+.dept-tag {
+  display: inline-block;
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 500;
+}
+.mono { font-family: 'DM Mono', monospace; }
+.net-val { color: #1D9E75; font-weight: 600; }
+.deduct-val { color: #ef4444; font-size: 12.5px; }
+
+/* Period */
+.period-val { font-size: 12.5px; color: #6b7280; }
+
+/* Status pill */
+.st-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.st-pill.paid    { background: #d1fae5; color: #065f46; }
+.st-pill.pending { background: #fef3c7; color: #92400e; }
+.st-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* Process Payment button */
+.btn-process {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 13px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-process.can-pay {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+.btn-process.can-pay:hover { background: #d1fae5; box-shadow: 0 2px 8px rgba(16,185,129,.2); }
+.btn-process.already-paid {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border: 1px solid #e5e7eb;
+  cursor: not-allowed;
+}
+
+/* Empty */
+.vp-empty { text-align: center; padding: 40px; color: #9ca3af; font-size: 13px; }
+
+/* ── Payment Timeline ───────────────────────────────────────────────────── */
+.pay-timeline {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-radius: 14px;
+  padding: 20px 28px;
+  margin-bottom: 22px;
+  position: relative;
+}
+.pay-timeline-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #a0a0b0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 18px;
+}
+.pay-timeline-track {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+/* connecting line behind steps */
+.pay-timeline-track::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  height: 2px;
+  background: #e8e8ec;
+  z-index: 0;
+}
+.pay-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+.pay-step-dot {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid transparent;
+  background: #fff;
+  transition: all .2s;
+  position: relative;
+}
+/* done */
+.pay-step.done .pay-step-dot {
+  background: #d1fae5;
+  border-color: #10b981;
+  color: #065f46;
+}
+/* active / current */
+.pay-step.active .pay-step-dot {
+  background: linear-gradient(135deg, #e85d42, #f07a64);
+  border-color: #e85d42;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(232,93,66,.15);
+}
+/* locked */
+.pay-step.locked .pay-step-dot {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #9ca3af;
+}
+/* completed (all paid) */
+.pay-step.complete .pay-step-dot {
+  background: #d1fae5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+/* connector line segment between steps (fills with color when done) */
+.pay-connector {
+  flex: 1;
+  height: 2px;
+  background: #e8e8ec;
+  position: relative;
+  z-index: 0;
+  margin: 0 -2px;
+  align-self: center;
+  margin-top: -22px;
+}
+.pay-connector.filled { background: #10b981; }
+.pay-connector.partial { background: linear-gradient(90deg, #10b981 50%, #e8e8ec 50%); }
+
+.pay-step-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+.pay-step.locked .pay-step-title { color: #9ca3af; }
+.pay-step-sub {
+  font-size: 10.5px;
+  color: #9ca3af;
+  margin-top: 2px;
+  text-align: center;
+  white-space: nowrap;
+}
+.pay-step.active .pay-step-sub { color: #e85d42; font-weight: 600; }
+.pay-step.done .pay-step-sub   { color: #10b981; }
+
+/* warning strip when locked */
+.pay-lock-strip {
+  margin-top: 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #92400e;
+}
+.pay-lock-strip.open {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+.pay-lock-strip.all-paid {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+</style>
+
+<div class="vp-root">
+
+  <!-- Top bar -->
+  <div class="vp-topbar">
+    <div>
+      <div class="vp-title">Payroll Processing</div>
+      <div class="vp-meta">Review and process employee payments</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span class="vp-period-badge">{{ month_name }} {{ year }}</span>
+      <a href="{{ url_for('payroll') }}" class="btn btn-outline btn-xs">← Back to Payroll</a>
+    </div>
+  </div>
+
+  <!-- ── Payment Cycle Timeline ─────────────────────────────────────────── -->
+  {% set today_day = now.day %}
+  {% set paid_count = summary|selectattr('payment_status','equalto','Paid')|list|length %}
+  {% set total_count = summary|length %}
+  {% set all_paid = (paid_count == total_count and total_count > 0) %}
+  {% set is_past_month = (year, month) < (now.year, now.month) %}
+  {% set window_open = is_past_month or (today_day >= 28) %}
+  {% set has_payroll = (total_count > 0) %}
+
+  <div class="pay-timeline">
+    <div class="pay-timeline-label">Monthly Payment Cycle — {{ month_name }} {{ year }}</div>
+    <div class="pay-timeline-track">
+
+      <!-- Step 1: Calculate Payroll -->
+      <div class="pay-step {{ 'done' if has_payroll else 'active' }}">
+        <div class="pay-step-dot">{{ '✓' if has_payroll else '1' }}</div>
+        <div class="pay-step-title">Calculate Payroll</div>
+        <div class="pay-step-sub">{{ 'Completed' if has_payroll else 'Run payroll first' }}</div>
+      </div>
+
+      <div class="pay-connector {{ 'filled' if has_payroll else '' }}"></div>
+
+      <!-- Step 2: Review -->
+      <div class="pay-step {{ 'done' if has_payroll else 'locked' }}">
+        <div class="pay-step-dot">{{ '✓' if has_payroll else '2' }}</div>
+        <div class="pay-step-title">Review</div>
+        <div class="pay-step-sub">{{ 'Verified' if has_payroll else 'Pending' }}</div>
+      </div>
+
+      <div class="pay-connector {{ 'filled' if (has_payroll and window_open) else 'partial' if has_payroll else '' }}"></div>
+
+      <!-- Step 3: Payment Window -->
+      {% if all_paid %}
+      <div class="pay-step complete">
+        <div class="pay-step-dot">✓</div>
+        <div class="pay-step-title">Payment Window</div>
+        <div class="pay-step-sub">All Paid</div>
+      </div>
+      {% elif window_open and has_payroll %}
+      <div class="pay-step active">
+        <div class="pay-step-dot">🔓</div>
+        <div class="pay-step-title">Payment Window</div>
+        <div class="pay-step-sub">Open Now</div>
+      </div>
+      {% else %}
+      <div class="pay-step locked">
+        <div class="pay-step-dot">🔒</div>
+        <div class="pay-step-title">Payment Window</div>
+        <div class="pay-step-sub">Opens 28 {{ month_name }}</div>
+      </div>
+      {% endif %}
+
+      <div class="pay-connector {{ 'filled' if all_paid else '' }}"></div>
+
+      <!-- Step 4: Disbursed -->
+      <div class="pay-step {{ 'complete' if all_paid else 'locked' }}">
+        <div class="pay-step-dot">{{ '✓' if all_paid else '4' }}</div>
+        <div class="pay-step-title">Disbursed</div>
+        <div class="pay-step-sub">
+          {% if all_paid %}{{ total_count }}/{{ total_count }} Paid
+          {% elif paid_count > 0 %}{{ paid_count }}/{{ total_count }} Paid
+          {% else %}Pending{% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Status strip below timeline -->
+    {% if all_paid %}
+    <div class="pay-lock-strip all-paid">
+      ✅ All salaries for {{ month_name }} {{ year }} have been disbursed successfully.
+    </div>
+    {% elif window_open and has_payroll %}
+    <div class="pay-lock-strip open">
+      🔓 Payment window is open. You can process salaries for {{ month_name }} {{ year }}.
+      {% if paid_count > 0 %} — {{ paid_count }} of {{ total_count }} employees paid so far.{% endif %}
+    </div>
+    {% elif has_payroll %}
+    {% set days_left = 28 - today_day %}
+    <div class="pay-lock-strip">
+      🔒 Payment processing is locked. Window opens on 28 {{ month_name }} {{ year }}
+      — <strong>{{ days_left }} day{{ 's' if days_left != 1 else '' }} remaining</strong>.
+      Payroll has been calculated and is ready for review.
+    </div>
+    {% else %}
+    <div class="pay-lock-strip">
+      ⚠️ No payroll calculated yet for {{ month_name }} {{ year }}.
+      <a href="{{ url_for('payroll') }}" style="color:inherit;font-weight:600;margin-left:4px;">Run payroll first →</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- KPI strip -->
+  <div class="vp-kpis">
+    <div class="vp-kpi" style="--kc:#4f46e5;">
+      <div class="vp-kpi-val">{{ summary|length }}</div>
+      <div class="vp-kpi-lbl">Total Employees</div>
+    </div>
+    <div class="vp-kpi" style="--kc:#1D9E75;">
+      <div class="vp-kpi-val">{{ summary|selectattr('payment_status','equalto','Paid')|list|length }}</div>
+      <div class="vp-kpi-lbl">Paid</div>
+    </div>
+    <div class="vp-kpi" style="--kc:#f59e0b;">
+      <div class="vp-kpi-val">{{ summary|selectattr('payment_status','ne','Paid')|list|length }}</div>
+      <div class="vp-kpi-lbl">Pending</div>
+    </div>
+    <div class="vp-kpi" style="--kc:#0ea5e9;">
+      <div class="vp-kpi-val mono" style="font-size:17px;">₹{{ "{:,.0f}".format(total) }}</div>
+      <div class="vp-kpi-lbl">Total Payroll</div>
+    </div>
+    <div class="vp-kpi" style="--kc:#ef4444;">
+      <div class="vp-kpi-val mono" style="font-size:17px;">₹{{ "{:,.0f}".format(paid_total) }}</div>
+      <div class="vp-kpi-lbl">Disbursed</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="vp-card">
+    <div class="vp-card-header">
+      <div class="vp-card-title">Employee Payroll — {{ month_name }} {{ year }}</div>
+      {% set pending_count = summary|selectattr('payment_status','ne','Paid')|list|length %}
+      {% if pending_count > 0 %}
+        {% if window_open %}
+        <form method="POST" action="{{ url_for('process_all_payments') }}" style="margin:0;"
+              onsubmit="return confirm('Process payment for ALL ' + {{ pending_count }} + ' pending employees?')">
+          <input type="hidden" name="month" value="{{ month }}">
+          <input type="hidden" name="year"  value="{{ year }}">
+          <button type="submit" class="btn-bulk-pay">
+            ⚡ Pay All Pending ({{ pending_count }})
+          </button>
+        </form>
+        {% else %}
+        <span class="btn-bulk-pay"
+              style="background:#9ca3af;cursor:not-allowed;"
+              title="Payment locked until 28 {{ month_name }}">
+          🔒 Locked until 28 {{ month_name }}
+        </span>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <table class="vp-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Pay Period</th>
+          <th class="right">Basic Pay</th>
+          <th class="right">Deductions</th>
+          <th class="right">Net Salary</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in summary %}
+        <tr>
+          <td>
+            <div class="emp-cell">
+              <div class="emp-av av-{{ loop.index0 % 6 }}">{{ r.name[0] }}</div>
+              <div>
+                <div class="emp-name">{{ r.name }}</div>
+                <div class="emp-pos">{{ r.position or r.dept_name }}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="dept-tag">{{ r.dept_name }}</span></td>
+          <td><span class="period-val">{{ month_name }} {{ year }}</span></td>
+          <td class="right mono">₹{{ "{:,.0f}".format(r.basic_pay) }}</td>
+          <td class="right mono deduct-val">−₹{{ "{:,.0f}".format(r.deductions) }}</td>
+          <td class="right">
+            <span class="mono net-val">₹{{ "{:,.0f}".format(r.net_salary) }}</span>
+          </td>
+          <td>
+            <span class="st-pill {{ 'paid' if r.payment_status=='Paid' else 'pending' }}">
+              <span class="st-dot"></span>
+              {{ r.payment_status }}
+            </span>
+          </td>
+          <td>
+            {% if r.payment_status == 'Paid' %}
+              <span class="btn-process already-paid">✓ Paid</span>
+            {% elif not window_open %}
+              <span class="btn-process already-paid"
+                    title="Payment locked until 28 {{ month_name }}. {{ 25 - now.day }} days remaining.">
+                🔒 Locked
+              </span>
+            {% else %}
+              <form method="POST" action="{{ url_for('process_payment') }}" style="margin:0;"
+                    onsubmit="return confirm('Release payment to {{ r.name }}?')">
+                <input type="hidden" name="employee_id" value="{{ r.employee_id }}">
+                <input type="hidden" name="month"       value="{{ month }}">
+                <input type="hidden" name="year"        value="{{ year }}">
+                <button type="submit" class="btn-process can-pay">↑ Process Payment</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="vp-empty">No payroll data found. <a href="{{ url_for('payroll') }}">Run payroll first →</a></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

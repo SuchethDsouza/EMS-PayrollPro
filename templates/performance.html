@@ -1,0 +1,1136 @@
+{% extends "base.html" %}
+{% block title %}Performance Analytics{% endblock %}
+{% block page_title %}Performance Analytics{% endblock %}
+
+{% block content %}
+<style>
+/* ── Match payroll's font stack ───────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --coral:   #e85d42;
+    --coral-lt:#fdf0ee;
+    --green:   #16a34a;
+    --green-lt:#f0fdf4;
+    --amber:   #d97706;
+    --amber-lt:#fffbeb;
+    --blue:    #2563eb;
+    --blue-lt: #eff6ff;
+    --slate:   #1a2035;
+    --text1:   #18181b;
+    --text2:   #52525b;
+    --text3:   #a0a0b0;   /* matched payroll */
+    --border:  #e8e8ec;   /* matched payroll */
+    --bg:      #f9fafb;
+    --white:   #ffffff;
+    --radius:  12px;
+    --shadow:  0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  }
+  *, *::before, *::after { box-sizing:border-box; }
+
+  /* Apply DM Sans globally in this page scope */
+  .pf, .pf * { font-family: 'DM Sans', sans-serif; }
+
+  /* ─── Layout ─────────────────────────────────────────── */
+  .pf { display:flex; flex-direction:column; gap:20px; color:#18181b; }
+
+  /* ─── Toolbar ────────────────────────────────────────── */
+  .pf-toolbar {
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:12px;
+    background:var(--white); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 20px;
+    box-shadow:var(--shadow);
+  }
+  .pf-toolbar-left h2 { font-size:15px; font-weight:700; color:var(--text1); margin:0 0 2px; }
+  .pf-toolbar-left p  { font-size:11px; color:var(--text3); margin:0; font-weight:500; }
+  .pf-toolbar-right { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .pf-sel {
+    font-family: 'DM Sans', sans-serif;
+    padding:7px 10px; border:1px solid var(--border); border-radius:8px;
+    font-size:12px; font-weight:500; color:var(--text2);
+    background:var(--bg); outline:none; cursor:pointer;
+    transition:border .15s;
+  }
+  .pf-sel:focus { border-color:var(--coral); }
+  .pf-btn {
+    font-family: 'DM Sans', sans-serif;
+    padding:8px 16px; background:var(--coral); color:#fff; border:none;
+    border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px; transition:background .15s, transform .1s;
+  }
+  .pf-btn:hover { background:#c94830; transform:translateY(-1px); }
+
+  /* ─── KPI strip — COMPACT (matched to payroll kpi-card) ─── */
+  .kpi-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+
+  .kpi {
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px 18px;          /* payroll: 16px 18px */
+    position:relative; overflow:hidden;
+    box-shadow:var(--shadow);
+    display:flex; flex-direction:column; justify-content:space-between;
+    min-height:90px;            /* payroll kpi-card height */
+    transition:transform .15s, box-shadow .15s;
+  }
+  .kpi:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.09); }
+
+  /* 3px top accent bar — same as payroll */
+  .kpi-bar {
+    position:absolute; top:0; left:0; width:100%; height:3px;
+    border-radius:14px 14px 0 0;
+  }
+
+  /* Remove big emoji icon from top — payroll doesn't have it */
+  .kpi-ico { display:none; }
+
+  /* Label — payroll style */
+  .kpi-lbl {
+    font-size:11px; font-weight:500; color:var(--text3);
+    text-transform:uppercase; letter-spacing:.07em;
+    margin-bottom:6px;
+  }
+
+  /* Value — payroll: DM Mono, 22px, #18181b */
+  .kpi-val {
+    font-family: 'DM Mono', monospace;
+    font-size:22px; font-weight:500;
+    color:var(--text1); line-height:1;
+  }
+
+  /* Sub line — payroll: 11px, #b0b0be */
+  .kpi-sub {
+    font-size:11px; color:#b0b0be;
+    margin-top:5px;
+    display:flex; align-items:center; gap:4px;
+  }
+  .up      { color:var(--green); }
+  .down    { color:var(--coral); }
+  .neutral { color:#b0b0be; }
+
+  /* Trend badge — payroll uses kpi-badge style */
+  .kpi-trend {
+    display:inline-block; font-size:10px; font-weight:600;
+    padding:2px 8px; border-radius:20px; margin-top:6px;
+    letter-spacing:.03em;
+  }
+  .trend-up   { background:#e3f7f0; color:#0e7a5a; }
+  .trend-down { background:#fdecea; color:#aa2e1a; }
+  .trend-flat { background:#f0f0f6; color:#a0a0b0; }
+
+  /* ─── Card ───────────────────────────────────────────── */
+  .card {
+    background:var(--white); border:1px solid var(--border);
+    border-radius:14px; box-shadow:var(--shadow); overflow:hidden;
+  }
+  /* Card header — matches payroll chart-card style */
+  .card-head { padding:16px 20px 0; }
+  .card-title {
+    font-size:13px; font-weight:600; color:var(--text1); margin-bottom:2px;
+  }
+  .card-sub {
+    font-size:11px; color:#b0b0be; margin-bottom:14px;
+  }
+  .card-body  { padding:0 20px 18px; }
+  .card-divider { height:1px; background:var(--border); margin:0 20px; }
+
+  /* ─── Grid helpers ───────────────────────────────────── */
+  .g2   { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .g3   { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  .g-23 { display:grid; grid-template-columns:1.5fr 1fr; gap:16px; }
+  .g-32 { display:grid; grid-template-columns:1fr 1.5fr; gap:16px; }
+
+  /* ─── Chart wrappers ─────────────────────────────────── */
+  .ch-lg { position:relative; height:220px; }
+  .ch-md { position:relative; height:180px; }
+  .ch-sm { position:relative; height:160px; }
+  .ch-rd { position:relative; height:200px; }
+
+  /* ─── Leaderboard ────────────────────────────────────── */
+  .ldb { display:flex; flex-direction:column; }
+  .ldb-row {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 20px; border-bottom:1px solid var(--bg);
+    transition:background .1s;
+  }
+  .ldb-row:last-child { border-bottom:none; }
+  .ldb-row:hover { background:var(--bg); }
+  .ldb-medal { font-size:18px; width:24px; text-align:center; flex-shrink:0; }
+  .ldb-av {
+    width:34px; height:34px; border-radius:9px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800;
+  }
+  .av-1 { background:#FEF3C7; color:#B45309; }
+  .av-2 { background:#F1F5F9; color:#475569; }
+  .av-3 { background:#FEF0E6; color:#C2410C; }
+  .av-n { background:var(--bg); color:var(--text3); }
+  .ldb-info { flex:1; min-width:0; }
+  .ldb-name { font-size:13px; font-weight:600; color:var(--text1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ldb-dept { font-size:11px; color:var(--text3); }
+  .ldb-right { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0; }
+  .ldb-score { font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--coral); }
+  .ldb-bar-bg { width:64px; height:5px; background:var(--bg); border-radius:4px; overflow:hidden; }
+  .ldb-bar-fg { height:5px; border-radius:4px; background:var(--coral); }
+
+  /* ─── Bottom performers ──────────────────────────────── */
+  .bot-row {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 20px; border-bottom:1px solid var(--bg);
+  }
+  .bot-row:last-child { border-bottom:none; }
+  .bot-av { width:32px; height:32px; border-radius:8px; background:var(--coral-lt); color:var(--coral); font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .bot-info { flex:1; }
+  .bot-name { font-size:13px; font-weight:600; color:var(--text1); }
+  .bot-dept { font-size:11px; color:var(--text3); }
+  .bot-score { font-family:'DM Mono',monospace; font-size:15px; font-weight:500; color:var(--coral); flex-shrink:0; }
+
+  /* ─── Insight pills ──────────────────────────────────── */
+  .ins-list { display:flex; flex-direction:column; gap:8px; }
+  .ins-pill {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:11px 14px; border-radius:10px; font-size:12px; line-height:1.55;
+    border-left:3px solid;
+  }
+  .ins-pill.good    { background:var(--green-lt); color:#166534; border-color:var(--green); }
+  .ins-pill.warn    { background:var(--amber-lt); color:#92400e; border-color:var(--amber); }
+  .ins-pill.danger  { background:var(--coral-lt); color:#991b1b; border-color:var(--coral); }
+  .ins-pill.info    { background:var(--blue-lt);  color:#1e40af; border-color:var(--blue); }
+  .ins-pill.neutral { background:var(--bg);       color:var(--text2); border-color:var(--border); }
+  .ins-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+
+  /* ─── Review coverage ────────────────────────────────── */
+  .cov-list { display:flex; flex-direction:column; gap:10px; }
+  .cov-item { display:flex; align-items:center; gap:10px; }
+  .cov-dept { font-size:12px; color:var(--text2); width:96px; flex-shrink:0; font-weight:500; }
+  .cov-bg   { flex:1; height:8px; background:var(--bg); border-radius:6px; overflow:hidden; }
+  .cov-fg   { height:8px; border-radius:6px; transition:width .6s; }
+  .cov-pct  { font-family:'DM Mono',monospace; font-size:11px; font-weight:500; width:34px; text-align:right; flex-shrink:0; }
+
+  /* ─── Most improved banner ───────────────────────────── */
+  .improved {
+    display:flex; align-items:center; gap:14px;
+    background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+    border:1px solid #bbf7d0; border-radius:11px; padding:14px 18px;
+  }
+  .improved-ico  { font-size:30px; flex-shrink:0; }
+  .improved-name { font-size:14px; font-weight:700; color:#166534; }
+  .improved-dept { font-size:11px; color:#4ade80; }
+  .improved-jump { font-family:'DM Mono',monospace; font-size:24px; font-weight:500; color:var(--green); margin-left:auto; flex-shrink:0; }
+
+  /* ─── Performance distribution ───────────────────────── */
+  .dist-wrap { display:grid; grid-template-columns:180px 1fr; gap:20px; align-items:center; padding:0 20px 18px; }
+  .dist-legend { display:flex; flex-direction:column; gap:9px; }
+  .dist-row { display:flex; align-items:center; gap:9px; }
+  .dist-dot { width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+  .dist-lbl { font-size:12px; color:var(--text2); flex:1; }
+  .dist-val { font-family:'DM Mono',monospace; font-size:12px; font-weight:500; color:var(--text1); }
+
+  /* ─── Salary/Payroll section ─────────────────────────── */
+  .sect-divider {
+    display:flex; align-items:center; gap:12px; font-size:11px;
+    font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text3);
+  }
+  .sect-divider::before,.sect-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ─── Employee table ─────────────────────────────────── */
+  .tbl-head { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--bg); flex-wrap:wrap; gap:10px; }
+  .tbl-head h3 { font-size:13px; font-weight:600; color:var(--text1); margin:0; }
+  .tbl-ctrl { display:flex; gap:8px; }
+  .tbl-search { font-family:'DM Sans',sans-serif; padding:7px 11px; border:1px solid var(--border); border-radius:8px; font-size:12px; outline:none; width:180px; color:var(--text2); background:var(--bg); }
+  .tbl-search:focus { border-color:var(--coral); }
+  .data-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .data-table thead th { padding:9px 16px; text-align:left; font-size:10px; font-weight:600; color:#b0b0be; background:#fafafa; border-bottom:1px solid #f0f0f4; text-transform:uppercase; letter-spacing:.07em; white-space:nowrap; }
+  .data-table tbody td { padding:11px 16px; border-bottom:1px solid #f5f5f8; vertical-align:middle; color:#18181b; }
+  .data-table tbody tr:last-child td { border-bottom:none; }
+  .data-table tbody tr:hover td { background:#fafafa; }
+  .empty-r { text-align:center; color:#c0c0cc; padding:36px !important; font-size:13px; }
+
+  /* ─── Badges ─────────────────────────────────────────── */
+  .b { display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
+  .b-dept   { background:var(--blue-lt);   color:#1e40af; }
+  .b-green  { background:var(--green-lt);  color:#166534; }
+  .b-amber  { background:var(--amber-lt);  color:#92400e; }
+  .b-coral  { background:var(--coral-lt);  color:#991b1b; }
+  .b-slate  { background:var(--bg);        color:var(--text3); }
+
+  /* ─── Score pill ─────────────────────────────────────── */
+  .sp { font-family:'DM Mono',monospace; display:inline-block; font-size:12px; font-weight:500; padding:3px 9px; border-radius:20px; min-width:44px; text-align:center; }
+  .sp-hi { background:var(--green-lt); color:#166534; }
+  .sp-md { background:var(--amber-lt); color:#92400e; }
+  .sp-lo { background:var(--coral-lt); color:#991b1b; }
+
+  /* ─── Trend indicators ───────────────────────────────── */
+  .ti-up   { color:var(--green); font-size:12px; font-weight:600; }
+  .ti-down { color:var(--coral); font-size:12px; font-weight:600; }
+  .ti-flat { color:var(--text3); font-size:12px; }
+
+  /* ─── Att bar ────────────────────────────────────────── */
+  .att-wrap { display:flex; align-items:center; gap:7px; }
+  .att-bg   { width:52px; height:5px; background:var(--bg); border-radius:4px; overflow:hidden; flex-shrink:0; }
+  .att-fg   { height:5px; border-radius:4px; }
+
+  /* ─── View button ────────────────────────────────────── */
+  .vbtn { padding:4px 10px; border:1px solid var(--border); border-radius:6px; font-size:11px; color:var(--text2); text-decoration:none; white-space:nowrap; }
+  .vbtn:hover { border-color:var(--coral); color:var(--coral); }
+
+  /* ─── Pagination ─────────────────────────────────────── */
+  .pg { display:flex; gap:4px; padding:10px 16px; }
+  .pg-btn { font-family:'DM Sans',sans-serif; padding:4px 10px; border:1px solid var(--border); border-radius:6px; font-size:12px; background:var(--white); cursor:pointer; color:var(--text2); }
+  .pg-btn.on { background:var(--coral); color:#fff; border-color:var(--coral); }
+
+  /* Metric cells in table — DM Mono */
+  .mono-cell { font-family:'DM Mono',monospace; font-size:12px; font-weight:500; }
+
+  /* ─── Modal ──────────────────────────────────────────── */
+  .mo { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:999; align-items:center; justify-content:center; }
+  .mo.open { display:flex; }
+  .mo-box { background:var(--white); border-radius:16px; width:560px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+  .mo-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
+  .mo-head h3 { font-size:14px; font-weight:600; color:var(--text1); margin:0; }
+  .mo-x { background:none; border:none; font-size:18px; color:var(--text3); cursor:pointer; }
+  .mo-body { padding:20px 22px; }
+  .mo-foot { display:flex; justify-content:flex-end; gap:8px; padding:14px 22px; border-top:1px solid var(--border); }
+  .fg2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:6px; }
+  .fg { display:flex; flex-direction:column; gap:4px; }
+  .fg label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text3); }
+  .fi { font-family:'DM Sans',sans-serif; padding:8px 11px; border:1px solid var(--border); border-radius:8px; font-size:13px; color:var(--text1); outline:none; }
+  .fi:focus { border-color:var(--coral); }
+  .sl-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); margin:14px 0 10px; display:flex; align-items:center; gap:8px; }
+  .sl-lbl::after { content:''; flex:1; height:1px; background:var(--border); }
+  .slg { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:8px; }
+  .sl-row { display:flex; flex-direction:column; gap:4px; }
+  .sl-row label { display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:var(--text2); }
+  .sl-v { font-family:'DM Mono',monospace; color:var(--coral); font-weight:500; }
+  input[type=range] { width:100%; accent-color:var(--coral); }
+  .btn-cancel { font-family:'DM Sans',sans-serif; padding:8px 16px; border:1px solid var(--border); background:var(--white); color:var(--text2); border-radius:8px; font-size:13px; cursor:pointer; }
+  .btn-save   { font-family:'DM Sans',sans-serif; padding:8px 20px; background:var(--coral); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+  .btn-save:hover { background:#c94830; }
+</style>
+
+<div class="pf">
+
+  <!-- ══ TOOLBAR ══════════════════════════════════════════════════════════════ -->
+  <div class="pf-toolbar">
+    <div class="pf-toolbar-left">
+      <h2>Performance Intelligence</h2>
+      <p>{{ perf|length }} reviews · {{ total_emp }} active employees · {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1] }} {{ year }}</p>
+    </div>
+    <div class="pf-toolbar-right">
+      <form method="GET" action="{{ url_for('performance') }}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select name="dept" class="pf-sel" onchange="this.form.submit()">
+          <option value="">All Departments</option>
+          {% for d in depts %}<option value="{{ d.dept_name }}" {% if dept_filter==d.dept_name %}selected{% endif %}>{{ d.dept_name }}</option>{% endfor %}
+        </select>
+        <select name="month" class="pf-sel" onchange="this.form.submit()">
+          {% for i in range(1,13) %}<option value="{{ i }}" {% if i==month %}selected{% endif %}>{{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i-1] }}</option>{% endfor %}
+        </select>
+        <select name="year" class="pf-sel" onchange="this.form.submit()">
+          {% for y in range(now.year, now.year-4, -1) %}<option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+        </select>
+      </form>
+      {% if session.role in ('admin','hr') %}
+      <button class="pf-btn" onclick="openMo()">＋ Add Review</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══ KPI STRIP — compact, payroll-matched ══════════════════════════════════ -->
+  <div class="kpi-strip">
+
+    <!-- Avg Rating -->
+    <div class="kpi">
+      <div class="kpi-bar" style="background:linear-gradient(90deg,var(--coral),#f07a64);"></div>
+      <div class="kpi-lbl">Company Avg Rating</div>
+      <div class="kpi-val">{{ avg_rating or '—' }}</div>
+      <div>
+        {% if avg_rating and prev_avg %}
+          {% if avg_rating > prev_avg %}
+            <span class="kpi-trend trend-up">▲ +{{ (avg_rating-prev_avg)|round(1) }} vs last month</span>
+          {% elif avg_rating < prev_avg %}
+            <span class="kpi-trend trend-down">▼ {{ (avg_rating-prev_avg)|round(1) }} vs last month</span>
+          {% else %}
+            <span class="kpi-trend trend-flat">→ Steady</span>
+          {% endif %}
+        {% else %}
+          <div class="kpi-sub neutral">vs {{ prev_avg or '—' }} last month</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- High Performers -->
+    <div class="kpi">
+      <div class="kpi-bar" style="background:linear-gradient(90deg,#1D9E75,#34c898);"></div>
+      <div class="kpi-lbl">High Performers</div>
+      <div class="kpi-val" style="color:#0e7a5a;">{{ high_perf_pct }}%</div>
+      <span class="kpi-badge badge-green-soft" style="display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:6px;background:#e3f7f0;color:#0e7a5a;">{{ high_perf_count }} of {{ total_emp }} rated ≥ 80</span>
+    </div>
+
+    <!-- Needs Attention -->
+    <div class="kpi">
+      <div class="kpi-bar" style="background:linear-gradient(90deg,var(--coral),#f9a8a0);"></div>
+      <div class="kpi-lbl">Needs Attention</div>
+      <div class="kpi-val" style="color:var(--coral);">{{ at_risk_count }}</div>
+      <div class="kpi-sub neutral">employees rated below 65</div>
+    </div>
+
+    <!-- Reviews Done -->
+    <div class="kpi">
+      <div class="kpi-bar" style="background:linear-gradient(90deg,var(--blue),#60a5fa);"></div>
+      <div class="kpi-lbl">Reviews This Month</div>
+      <div class="kpi-val" style="color:var(--blue);">{{ review_pct }}%</div>
+      <div class="kpi-sub {% if review_pct>=80 %}up{% elif review_pct>=50 %}neutral{% else %}down{% endif %}">{{ reviewed_this_month }} / {{ total_emp }} completed</div>
+    </div>
+
+  </div>
+
+  <!-- ══ ROW A: Dept Bar + Radar ══════════════════════════════════════════════ -->
+  <div class="g-23">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Department Performance</div>
+        <div class="card-sub">Average rating per department — dashed line = benchmark 75</div>
+      </div>
+      <div class="card-body"><div class="ch-lg"><canvas id="deptChart"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Team Skills Breakdown</div>
+        <div class="card-sub">Company average vs benchmark (75) across 5 competencies</div>
+      </div>
+      <div class="card-body">
+        <div style="position:relative; height:200px;">
+          <canvas id="radarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ ROW B: Monthly Trend + Attendance Pie ════════════════════════════════ -->
+  <div class="g-23">
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Monthly Performance Trend</div>
+        <div class="card-sub">Company-wide average rating across all {{ year }} months</div>
+      </div>
+      <div class="card-body"><div class="ch-md"><canvas id="trendChart"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Attendance Breakdown</div>
+        <div class="card-sub">Present / Absent / On Leave for {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1] }} {{ year }}</div>
+      </div>
+      <div class="card-body"><div class="ch-md"><canvas id="attPie"></canvas></div></div>
+    </div>
+
+  </div>
+
+  <!-- ══ ROW C: Top Performers + Bottom + Most Improved + Coverage ════════════ -->
+  <div class="g3">
+
+    <!-- Top 5 -->
+    <div class="card">
+      <div class="card-head" style="padding-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div><div class="card-title">Top Performers</div><div class="card-sub" style="margin-bottom:0;">Highest rated this period</div></div>
+          <span style="font-size:22px;">🏆</span>
+        </div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="ldb">
+        {% for t in top %}
+        <div class="ldb-row">
+          <div class="ldb-medal">{% if loop.index==1 %}🥇{% elif loop.index==2 %}🥈{% elif loop.index==3 %}🥉{% else %}#{{ loop.index }}{% endif %}</div>
+          <div class="ldb-av {% if loop.index==1 %}av-1{% elif loop.index==2 %}av-2{% elif loop.index==3 %}av-3{% else %}av-n{% endif %}">{{ t.name[0] }}</div>
+          <div class="ldb-info"><div class="ldb-name">{{ t.name }}</div><div class="ldb-dept">{{ t.dept_name }}</div></div>
+          <div class="ldb-right">
+            <div class="ldb-score">{{ t.avg_rating }}</div>
+            <div class="ldb-bar-bg"><div class="ldb-bar-fg" style="width:{{ t.avg_rating }}%;"></div></div>
+          </div>
+        </div>
+        {% else %}<div style="padding:28px;text-align:center;color:var(--text3);font-size:13px;">No data yet — add reviews.</div>{% endfor %}
+      </div>
+    </div>
+
+    <!-- Bottom 5 -->
+    <div class="card">
+      <div class="card-head" style="padding-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div><div class="card-title">Needs Improvement</div><div class="card-sub" style="margin-bottom:0;">Employees requiring coaching</div></div>
+          <span style="font-size:22px;">📈</span>
+        </div>
+      </div>
+      <div class="card-divider"></div>
+      <div>
+        {% for b in bottom %}
+        <div class="bot-row">
+          <div class="bot-av">{{ b.name[0] }}</div>
+          <div class="bot-info"><div class="bot-name">{{ b.name }}</div><div class="bot-dept">{{ b.dept_name }}</div></div>
+          <div class="bot-score">{{ b.avg_rating }}</div>
+        </div>
+        {% else %}<div style="padding:28px;text-align:center;color:var(--text3);font-size:13px;">🎉 All employees performing well.</div>{% endfor %}
+      </div>
+    </div>
+
+    <!-- Most Improved + Coverage -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">Most Improved</div><div class="card-sub" style="margin-bottom:10px;">Biggest rating jump vs last month</div></div>
+      <div class="card-body" style="padding-top:0;">
+        {% if most_improved %}
+        <div class="improved">
+          <div class="improved-ico">🌟</div>
+          <div><div class="improved-name">{{ most_improved.name }}</div><div class="improved-dept">{{ most_improved.dept }}</div></div>
+          <div class="improved-jump">+{{ most_improved.jump }}</div>
+        </div>
+        {% else %}<div style="text-align:center;color:var(--text3);font-size:12px;padding:14px 0;">Not enough data to compare months.</div>{% endif %}
+      </div>
+      <div class="card-divider"></div>
+      <div class="card-head" style="padding-top:14px;padding-bottom:8px;"><div class="card-title">Review Coverage</div><div class="card-sub" style="margin-bottom:0;">{{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1] }} {{ year }}</div></div>
+      <div class="card-body" style="padding-top:8px;">
+        <div class="cov-list">
+          {% for rc in review_coverage %}
+          {% set pct = ((rc.reviewed / rc.total) * 100)|int if rc.total else 0 %}
+          <div class="cov-item">
+            <div class="cov-dept">{{ rc.dept }}</div>
+            <div class="cov-bg"><div class="cov-fg" style="width:{{ pct }}%;background:{% if pct>=80 %}var(--green){% elif pct>=50 %}var(--amber){% else %}var(--coral){% endif %};"></div></div>
+            <div class="cov-pct" style="color:{% if pct>=80 %}var(--green){% elif pct>=50 %}var(--amber){% else %}var(--coral){% endif %};">{{ pct }}%</div>
+          </div>
+          {% else %}<div style="color:var(--text3);font-size:12px;text-align:center;padding:8px 0;">No data.</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ ROW D: Distribution Donut + Smart Insights ═══════════════════════════ -->
+  <div class="g2">
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Performance Distribution</div><div class="card-sub">Workforce quality — Excellent · Good · Average · At Risk</div></div>
+      <div class="dist-wrap">
+        <div style="position:relative;height:200px;"><canvas id="distDonut"></canvas></div>
+        <div class="dist-legend" id="distLegend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">💡 Smart Insights</div><div class="card-sub">Auto-generated from your performance &amp; attendance data</div></div>
+      <div class="card-body">
+        {% if insights %}
+        <div class="ins-list">
+          {% for ins in insights %}
+          {% set cls = 'good' if ins.icon in ['🏆','📈','✅','⬆️'] else ('warn' if ins.icon in ['⚠️','📉'] else ('danger' if ins.icon == '🔴' else 'info')) %}
+          <div class="ins-pill {{ cls }}">
+            <span class="ins-icon">{{ ins.icon }}</span>
+            <span>{{ ins.text }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align:center;color:var(--text3);font-size:13px;padding:32px 0;">Add performance reviews to generate insights.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ ROW E: Salary by Dept + Payroll Trend ════════════════════════════════ -->
+  <div class="sect-divider">Payroll &amp; Cost Analytics</div>
+  <div class="g2">
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Salary Cost by Department</div><div class="card-sub">Net salary disbursed per dept — {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month-1] }} {{ year }}</div></div>
+      <div class="card-body"><div class="ch-md"><canvas id="salaryDeptChart"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Monthly Payroll Trend</div><div class="card-sub">Total net salary disbursed each month in {{ year }}</div></div>
+      <div class="card-body"><div class="ch-md"><canvas id="payrollTrendChart"></canvas></div></div>
+    </div>
+
+  </div>
+
+  <!-- ══ EMPLOYEE TABLE ════════════════════════════════════════════════════════ -->
+  <div class="card" style="overflow:visible;">
+    <div class="tbl-head">
+      <h3>All Employees — Performance Summary</h3>
+      <div class="tbl-ctrl">
+        <input type="text" class="tbl-search" id="empSearch" placeholder="Search employee…" oninput="filterTbl()">
+        <select class="pf-sel" id="deptTblFilter" onchange="filterTbl()">
+          <option value="">All Depts</option>
+          {% for d in depts %}<option value="{{ d.dept_name }}">{{ d.dept_name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="empTbl">
+        <thead>
+          <tr>
+            <th>Employee</th><th>Department</th><th>Rating</th>
+            <th>Punctuality</th><th>Tasks</th><th>Teamwork</th><th>Comm.</th><th>Initiative</th>
+            <th>Status</th><th>Trend vs Avg</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="empTblBody">
+          {% for r in perf %}
+          <tr class="emp-row" data-name="{{ r.emp_name|lower }}" data-dept="{{ r.dept_name }}">
+            <td>
+              <div style="display:flex;align-items:center;gap:9px;">
+                <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--coral),#f07a64);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ r.emp_name[0] }}</div>
+                <strong style="font-size:13px;font-weight:600;color:var(--text1);">{{ r.emp_name }}</strong>
+              </div>
+            </td>
+            <td><span class="b b-dept">{{ r.dept_name }}</span></td>
+            <td>
+              {% if r.overall_rating %}
+              <span class="sp {% if r.overall_rating>=80 %}sp-hi{% elif r.overall_rating>=65 %}sp-md{% else %}sp-lo{% endif %}">{{ r.overall_rating }}</span>
+              {% else %}<span style="color:var(--text3);">—</span>{% endif %}
+            </td>
+            <td class="mono-cell" style="color:{% if r.punctuality>=80 %}var(--green){% elif r.punctuality>=65 %}var(--amber){% else %}var(--coral){% endif %};">{{ r.punctuality }}</td>
+            <td class="mono-cell" style="color:{% if r.task_completion>=80 %}var(--green){% elif r.task_completion>=65 %}var(--amber){% else %}var(--coral){% endif %};">{{ r.task_completion }}</td>
+            <td class="mono-cell" style="color:{% if r.teamwork>=80 %}var(--green){% elif r.teamwork>=65 %}var(--amber){% else %}var(--coral){% endif %};">{{ r.teamwork }}</td>
+            <td class="mono-cell" style="color:{% if r.communication>=80 %}var(--green){% elif r.communication>=65 %}var(--amber){% else %}var(--coral){% endif %};">{{ r.communication }}</td>
+            <td class="mono-cell" style="color:{% if r.initiative>=80 %}var(--green){% elif r.initiative>=65 %}var(--amber){% else %}var(--coral){% endif %};">{{ r.initiative }}</td>
+            <td>
+              {% if not r.overall_rating %}<span class="b b-slate">No review</span>
+              {% elif r.overall_rating>=80 %}<span class="b b-green">Excellent</span>
+              {% elif r.overall_rating>=65 %}<span class="b b-amber">Average</span>
+              {% else %}<span class="b b-coral">At Risk</span>{% endif %}
+            </td>
+            <td>
+              {% if r.overall_rating and avg_rating %}
+                {% if r.overall_rating > avg_rating %}<span class="ti-up">▲ Above</span>
+                {% elif r.overall_rating < avg_rating %}<span class="ti-down">▼ Below</span>
+                {% else %}<span class="ti-flat">— At avg</span>{% endif %}
+              {% else %}<span class="ti-flat">—</span>{% endif %}
+            </td>
+            <td><a href="{{ url_for('employee_performance', eid=r.employee_id) }}" class="vbtn">View →</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="11" class="empty-r">No performance reviews for this period. Click "Add Review" to get started.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="pg" id="pgBar"></div>
+  </div>
+
+</div><!-- .pf -->
+
+<!-- ══ ADD REVIEW MODAL ══════════════════════════════════════════════════════ -->
+{% if session.role in ('admin','hr') %}
+<div class="mo" id="moAdd">
+  <div class="mo-box">
+    <div class="mo-head"><h3>Add Performance Review</h3><button class="mo-x" onclick="closeMo()">✕</button></div>
+    <div class="mo-body">
+      <form method="POST" action="{{ url_for('add_performance') }}">
+        <div class="fg2">
+          <div class="fg">
+            <label>Employee *</label>
+            <select name="employee_id" class="fi" required>
+              {% for e in employees %}<option value="{{ e.employee_id }}">{{ e.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Month *</label>
+            <select name="month" class="fi">
+              {% for i in range(1,13) %}<option value="{{ i }}" {% if i==month %}selected{% endif %}>{{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i-1] }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="fg" style="grid-column:1/-1;">
+            <label>Year *</label>
+            <input type="number" name="year" class="fi" value="{{ year }}">
+          </div>
+        </div>
+        <div class="sl-lbl">Performance Metrics (0 – 100)</div>
+        <div class="slg">
+          {% for fld, lbl in [('punctuality','Punctuality'),('task_completion','Task Completion'),('teamwork','Teamwork'),('communication','Communication'),('initiative','Initiative')] %}
+          <div class="sl-row">
+            <label>{{ lbl }}<span class="sl-v" id="sv_{{ fld }}">80</span></label>
+            <input type="range" name="{{ fld }}" min="0" max="100" value="80" oninput="document.getElementById('sv_{{ fld }}').textContent=this.value">
+          </div>
+          {% endfor %}
+        </div>
+        <div class="fg" style="margin-top:6px;">
+          <label>Remarks</label>
+          <textarea name="remarks" class="fi" rows="2" placeholder="Optional feedback…" style="resize:vertical;font-family:'DM Sans',sans-serif;"></textarea>
+        </div>
+        <div class="mo-foot">
+          <button type="button" class="btn-cancel" onclick="closeMo()">Cancel</button>
+          <button type="submit" class="btn-save">Save Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── Data from Flask ───────────────────────────────────────────────────────────
+const TREND_DATA   = {{ monthly_trend|safe }};
+const DEPT_DATA    = {{ dept_perf|safe }};
+const RADAR_DATA   = {{ radar|safe }};
+const SAL_DEPT     = {{ salary_by_dept|safe }};
+const PAY_TREND    = {{ payroll_trend|safe }};
+const ATT_PIE      = {{ att_pie|safe }};
+
+// ── Brand palette — matched to payroll ────────────────────────────────────────
+const CORAL  = '#e85d42';
+const GREEN  = '#1D9E75';
+const BLUE   = '#378ADD';
+const AMBER  = '#d97706';
+const PURPLE = '#7F77DD';
+const PALETTE = [PURPLE, GREEN, AMBER, '#D4537E', BLUE, CORAL];
+
+// ── Global Chart defaults — DM Sans + DM Mono like payroll ───────────────────
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color = '#a0a0b0';   // payroll: --text3
+
+// ── Shared axis config — exact payroll style ──────────────────────────────────
+const AX = {
+  grid:  { color:'#f4f4f7', drawBorder:false },
+  ticks: { font:{ size:11, family:"'DM Mono', monospace" }, color:'#b0b0be', padding:6 },
+  border:{ display:false }
+};
+
+// ── Shared tooltip — payroll's dark tooltip ───────────────────────────────────
+const TT = {
+  backgroundColor:'#18181b',
+  titleColor:'#f9fafb',
+  bodyColor:'#d1d5db',
+  padding:12,
+  cornerRadius:10,
+  displayColors:false,
+  titleFont:{ size:11, weight:'600', family:"'DM Sans', sans-serif" },
+  bodyFont:{ size:11, family:"'DM Sans', sans-serif" }
+};
+
+// ── Top-label plugin — same as payroll's topLabelPlugin ──────────────────────
+const topLabelPlugin = {
+  id: 'topLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, di) => {
+      if (ds.type === 'line') return; // skip benchmark line
+      const meta = chart.getDatasetMeta(di);
+      meta.data.forEach((bar, i) => {
+        const val = ds.data[i];
+        if (!val) return;
+        ctx.save();
+        ctx.font = "500 11px 'DM Sans', sans-serif";
+        ctx.fillStyle = '#888';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(String(val), bar.x, bar.y - 4);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+// ── Top-label plugin for ₹ values (salary charts) ────────────────────────────
+const topLabelRupee = {
+  id: 'topLabelsRupee',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      meta.data.forEach((bar, i) => {
+        const val = ds.data[i];
+        if (!val) return;
+        ctx.save();
+        ctx.font = "500 11px 'DM Sans', sans-serif";
+        ctx.fillStyle = '#888';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('₹' + Number(val).toLocaleString('en-IN'), bar.x, bar.y - 4);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+// ── 1. Department Bar — with top rating labels + benchmark line ───────────────
+new Chart(document.getElementById('deptChart'), {
+  type: 'bar',
+  plugins: [topLabelPlugin],
+  data: {
+    labels: DEPT_DATA.map(d => d.dept_name),
+    datasets: [
+      {
+        label: 'Avg Rating',
+        data: DEPT_DATA.map(d => d.avg_rating),
+        backgroundColor: DEPT_DATA.map((_, i) => PALETTE[i % PALETTE.length]),
+        borderRadius: 7,
+        borderSkipped: false,
+        borderWidth: 0
+      },
+      {
+        label: 'Benchmark 75',
+        data: DEPT_DATA.map(() => 75),
+        type: 'line',
+        borderColor: '#94a3b8',
+        borderWidth: 1.5,
+        borderDash: [5, 4],
+        pointRadius: 0,
+        fill: false,
+        order: 0
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    layout: { padding: { top: 22 } },
+    plugins: {
+      legend: {
+        display: true, position: 'top', align: 'end',
+        labels: { font: { size: 11, family: "'DM Sans', sans-serif" }, boxWidth: 10, padding: 12, color: '#b0b0be' }
+      },
+      tooltip: { ...TT, callbacks: { label: ctx => '  ' + ctx.dataset.label + ': ' + ctx.parsed.y } }
+    },
+    scales: {
+      x: { ...AX, grid: { display: false } },
+      y: { ...AX, min: 0, max: 100, ticks: { ...AX.ticks, stepSize: 25 } }
+    }
+  }
+});
+
+// ── 2. Team Skills — Horizontal Bar ───────────────────────────────────────────
+(function () {
+  const skills  = ['Punctuality', 'Task Completion', 'Teamwork', 'Communication', 'Initiative'];
+  const values  = [RADAR_DATA.p||0, RADAR_DATA.tc||0, RADAR_DATA.tw||0, RADAR_DATA.cm||0, RADAR_DATA.ini||0];
+  const bench   = 75; // benchmark line
+
+  // Color each bar: green ≥ bench, amber within 10, coral below
+  const barColors = values.map(v =>
+    v >= bench       ? '#1D9E75' :
+    v >= bench - 10  ? '#d97706' : CORAL
+  );
+  const barColorsAlpha = barColors.map(c => c + '22');
+
+  new Chart(document.getElementById('radarChart'), {
+    type: 'bar',
+    data: {
+      labels: skills,
+      datasets: [
+        {
+          label: 'Team Avg',
+          data: values,
+          backgroundColor: barColors.map(c => c + 'cc'),
+          borderColor: barColors,
+          borderWidth: 1.5,
+          borderRadius: 6,
+          borderSkipped: false,
+          barThickness: 18,
+        },
+        {
+          label: 'Benchmark (75)',
+          data: Array(skills.length).fill(bench),
+          backgroundColor: 'transparent',
+          borderColor: '#94a3b8',
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          borderRadius: 0,
+          barThickness: 0,   // hide bars, only show via annotation-style overlay
+          type: 'line',
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          tension: 0,
+          borderDashOffset: 0,
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 10 } },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'end',
+          labels: {
+            boxWidth: 10, boxHeight: 10,
+            borderRadius: 3,
+            useBorderRadius: true,
+            font: { size: 11, family: "'DM Sans', sans-serif" },
+            color: '#71717a',
+            padding: 12,
+            generateLabels: (chart) => [
+              {
+                text: 'Team Avg',
+                fillStyle: CORAL + 'cc',
+                strokeStyle: CORAL,
+                lineWidth: 1.5,
+                borderRadius: 3,
+                hidden: false,
+                datasetIndex: 0,
+              },
+              {
+                text: 'Benchmark (75)',
+                fillStyle: 'transparent',
+                strokeStyle: '#94a3b8',
+                lineWidth: 1.5,
+                borderRadius: 0,
+                hidden: false,
+                datasetIndex: 1,
+              }
+            ]
+          }
+        },
+        tooltip: {
+          ...TT,
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 1) return ' Benchmark: 75';
+              const v = ctx.parsed.x;
+              const diff = (v - bench).toFixed(1);
+              const sign = diff >= 0 ? '+' : '';
+              return ` Score: ${v}  (${sign}${diff} vs benchmark)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 0, max: 100,
+          ticks: {
+            stepSize: 25,
+            font: { size: 10, family: "'DM Mono', monospace" },
+            color: '#a1a1aa',
+            callback: v => v
+          },
+          grid: { color: '#f4f4f7' },
+          border: { display: false }
+        },
+        y: {
+          ticks: {
+            font: { size: 11.5, weight: '600', family: "'DM Sans', sans-serif" },
+            color: '#3f3f46',
+            padding: 6
+          },
+          grid: { display: false },
+          border: { display: false }
+        }
+      }
+    }
+  });
+})();
+
+
+// ── 3. Monthly Trend — gradient fill, payroll point style ─────────────────────
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: TREND_DATA.map(t => t.month),
+    datasets: [{
+      label: 'Avg Rating',
+      data: TREND_DATA.map(t => t.avg),
+      borderColor: CORAL,
+      backgroundColor: ctx => {
+        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+        g.addColorStop(0, CORAL + '30');
+        g.addColorStop(1, CORAL + '00');
+        return g;
+      },
+      borderWidth: 2.5,
+      pointBackgroundColor: '#fff',
+      pointBorderColor: CORAL,
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.4,
+      fill: true
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    layout: { padding: { top: 10 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...TT, callbacks: { label: ctx => '  Rating: ' + ctx.parsed.y } }
+    },
+    scales: {
+      x: { ...AX, grid: { display: false } },
+      y: { ...AX, min: 0, max: 100, ticks: { ...AX.ticks, stepSize: 25 } }
+    }
+  }
+});
+
+// ── 4. Attendance Pie ─────────────────────────────────────────────────────────
+new Chart(document.getElementById('attPie'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Present', 'Absent', 'On Leave'],
+    datasets: [{
+      data: [ATT_PIE.present||0, ATT_PIE.absent||0, ATT_PIE.leave||0],
+      backgroundColor: [GREEN, CORAL, AMBER],
+      hoverBackgroundColor: ['#15803d', '#c94830', '#b45309'],
+      borderWidth: 4, borderColor: '#fff', hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '62%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { font: { size: 11, weight: '500', family: "'DM Sans', sans-serif" }, color: '#52525b', padding: 16, usePointStyle: true, pointStyle: 'circle' }
+      },
+      tooltip: { ...TT, callbacks: { label: ctx => { const t = ctx.dataset.data.reduce((a,b)=>a+b,0); const p = t ? ((ctx.parsed/t)*100).toFixed(1) : 0; return `  ${ctx.label}: ${ctx.parsed} days (${p}%)`; } } }
+    }
+  }
+});
+
+// ── 5. Performance Distribution Donut ────────────────────────────────────────
+const ratings = {{ perf|map(attribute='overall_rating')|list|tojson }};
+const dv = [
+  ratings.filter(v => v >= 85).length,
+  ratings.filter(v => v >= 70 && v < 85).length,
+  ratings.filter(v => v >= 55 && v < 70).length,
+  ratings.filter(v => v < 55).length
+];
+const dl = ['Excellent (≥85)', 'Good (70–84)', 'Average (55–69)', 'At Risk (<55)'];
+const dc = [GREEN, BLUE, AMBER, CORAL];
+const dt = dv.reduce((a,b) => a+b, 0);
+
+new Chart(document.getElementById('distDonut'), {
+  type: 'doughnut',
+  data: { labels: dl, datasets: [{ data: dv, backgroundColor: dc, hoverBackgroundColor: dc.map(c=>c+'dd'), borderWidth: 4, borderColor: '#fff', hoverOffset: 8 }] },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '65%',
+    plugins: { legend: { display: false }, tooltip: { ...TT, callbacks: { label: ctx => { const p = dt ? ((ctx.parsed/dt)*100).toFixed(1) : 0; return `  ${ctx.label}: ${ctx.parsed} (${p}%)`; } } } }
+  }
+});
+
+const leg = document.getElementById('distLegend');
+dl.forEach((lbl, i) => {
+  const p = dt ? ((dv[i]/dt)*100).toFixed(1) : '0.0';
+  leg.innerHTML += `<div class="dist-row"><div class="dist-dot" style="background:${dc[i]};"></div><div class="dist-lbl">${lbl}</div><div class="dist-val">${dv[i]} · ${p}%</div></div>`;
+});
+
+// ── 6. Salary by Dept — vertical bar with ₹ top labels (payroll style) ────────
+new Chart(document.getElementById('salaryDeptChart'), {
+  type: 'bar',
+  plugins: [topLabelRupee],
+  data: {
+    labels: SAL_DEPT.map(d => d.dept_name),
+    datasets: [{
+      label: 'Net Salary (₹)',
+      data: SAL_DEPT.map(d => d.total_salary),
+      backgroundColor: SAL_DEPT.map((_, i) => PALETTE[i % PALETTE.length]),
+      borderRadius: 7,
+      borderSkipped: false,
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    layout: { padding: { top: 26 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...TT, callbacks: { label: ctx => '  ₹' + ctx.parsed.y.toLocaleString('en-IN') } }
+    },
+    scales: {
+      x: { ...AX, grid: { display: false } },
+      y: {
+        ...AX,
+        ticks: { ...AX.ticks, callback: v => v >= 1000 ? '₹' + (v/1000).toFixed(0) + 'k' : '₹' + v }
+      }
+    }
+  }
+});
+
+// ── 7. Payroll Trend — blue gradient area, payroll style ──────────────────────
+const allMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const trendMap = {};
+PAY_TREND.forEach(t => { trendMap[t.month] = t.total; });
+const filledData = allMonths.map(m => trendMap[m] || 0);
+
+new Chart(document.getElementById('payrollTrendChart'), {
+  type: 'line',
+  data: {
+    labels: allMonths,
+    datasets: [{
+      label: 'Total Payroll (₹)',
+      data: filledData,
+      borderColor: BLUE,
+      backgroundColor: ctx => {
+        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+        g.addColorStop(0, 'rgba(55,138,221,0.18)');
+        g.addColorStop(1, 'rgba(55,138,221,0.00)');
+        return g;
+      },
+      borderWidth: 2.5,
+      pointBackgroundColor: ctx => filledData[ctx.dataIndex] > 0 ? '#fff' : 'transparent',
+      pointBorderColor:     ctx => filledData[ctx.dataIndex] > 0 ? BLUE : 'transparent',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      tension: 0.4,
+      fill: true
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    layout: { padding: { top: 10 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { ...TT, callbacks: { label: ctx => ctx.raw > 0 ? '  ₹' + ctx.raw.toLocaleString('en-IN') : '  No data' } }
+    },
+    scales: {
+      x: { ...AX, grid: { display: false } },
+      y: {
+        ...AX,
+        beginAtZero: true,
+        ticks: {
+          ...AX.ticks,
+          callback: v => v === 0 ? '₹0' : v >= 100000 ? '₹' + (v/100000).toFixed(1) + 'L' : '₹' + (v/1000).toFixed(0) + 'k'
+        }
+      }
+    }
+  }
+});
+
+// ── Table filter + pagination ─────────────────────────────────────────────────
+const RPP = 10; let pg = 1;
+function filterTbl() {
+  const q = document.getElementById('empSearch').value.toLowerCase();
+  const d = document.getElementById('deptTblFilter').value;
+  document.querySelectorAll('.emp-row').forEach(r => {
+    r.style.display = (r.dataset.name.includes(q) && (!d || r.dataset.dept === d)) ? '' : 'none';
+  });
+  pg = 1; renderPg();
+}
+function renderPg() {
+  const vis = [...document.querySelectorAll('.emp-row')].filter(r => r.style.display !== 'none');
+  const tot = Math.ceil(vis.length / RPP);
+  const bar = document.getElementById('pgBar');
+  vis.forEach((r, i) => { r.style.display = Math.floor(i / RPP) + 1 === pg ? '' : 'none'; });
+  bar.innerHTML = '';
+  if (tot <= 1) return;
+  for (let p = 1; p <= tot; p++) {
+    const b = document.createElement('button');
+    b.className = 'pg-btn' + (p === pg ? ' on' : '');
+    b.textContent = p;
+    b.onclick = () => { pg = p; renderPg(); };
+    bar.appendChild(b);
+  }
+}
+renderPg();
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openMo()  { document.getElementById('moAdd').classList.add('open'); }
+function closeMo() { document.getElementById('moAdd').classList.remove('open'); }
+document.getElementById('moAdd')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeMo(); });
+</script>
+{% endblock %}

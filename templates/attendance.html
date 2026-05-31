@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+
+{% block content %}
+
+<!-- ── Compact Monthly Summary Stats ─────────────────────────────────────── -->
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+
+  <div class="stat-card stat-green" style="flex:1;min-width:130px;padding:14px 16px;">
+    <div class="stat-icon" style="font-size:20px;">✅</div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:20px;">{{ monthly_stats.present }}</div>
+      <div class="stat-label">Present Today</div><div class="stat-sublabel">Employees in office today</div>
+    </div>
+  </div>
+
+  <div class="stat-card stat-red" style="flex:1;min-width:130px;padding:14px 16px;">
+    <div class="stat-icon" style="font-size:20px;">❌</div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:20px;">{{ monthly_stats.absent }}</div>
+      <div class="stat-label">Absent Today</div><div class="stat-sublabel">Employees absent today</div>
+    </div>
+  </div>
+
+  <div class="stat-card stat-orange" style="flex:1;min-width:130px;padding:14px 16px;">
+    <div class="stat-icon" style="font-size:20px;">🌿</div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:20px;">{{ monthly_stats.on_leave }}</div>
+      <div class="stat-label">On Leave Today</div><div class="stat-sublabel">Employees on leave today</div>
+    </div>
+  </div>
+
+  <div class="stat-card stat-purple" style="flex:1;min-width:130px;padding:14px 16px;">
+    <div class="stat-icon" style="font-size:20px;">📊</div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:20px;">{{ monthly_stats.att_pct }}%</div>
+      <div class="stat-label">Avg Attendance</div><div class="stat-sublabel">Monthly basis (weekdays)</div>
+    </div>
+  </div>
+
+  <div class="stat-card stat-blue" style="flex:1;min-width:130px;padding:14px 16px;">
+    <div class="stat-icon" style="font-size:20px;">📅</div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:20px;">{{ monthly_stats.total }}</div>
+      <div class="stat-label">Weekday Activity</div><div class="stat-sublabel">Mon–Fri records this month</div>
+    </div>
+  </div>
+
+  <!-- Export Button card -->
+  {% if session.role in ('admin','hr') %}
+  <div style="flex:1;min-width:130px;display:flex;flex-direction:column;gap:6px;justify-content:center;">
+    <a id="exportBtn"
+       href="{{ url_for('attendance_export_excel', month=now.month, year=now.year) }}"
+       class="btn btn-primary"
+       style="background:#1D9E75;text-align:center;font-size:13px;padding:10px 14px;">
+      ⬇ Export Excel
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- ── Filter Bar ─────────────────────────────────────────────────────────── -->
+<div class="filter-bar" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px;">
+
+  <div>
+    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;font-weight:500;">Select Date</label>
+    <form method="GET" style="display:flex;gap:8px;margin:0;" id="dateForm">
+      <input type="date" name="date" id="dateInput" value="{{ date_str }}" class="form-input" style="width:175px;">
+      <input type="hidden" name="dept"   value="{{ request.args.get('dept','') }}">
+      <input type="hidden" name="status" value="{{ request.args.get('status','') }}">
+      <button type="submit" class="btn btn-primary">Load</button>
+    </form>
+  </div>
+
+  <div>
+    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;font-weight:500;">Department</label>
+    <select id="filterDept" class="form-input" style="width:185px;" onchange="applyFilters()">
+      <option value="">All Departments</option>
+      {% set seen_depts = [] %}
+      {% for r in records %}
+        {% if r.dept_name not in seen_depts %}
+          {% set _ = seen_depts.append(r.dept_name) %}
+          <option value="{{ r.dept_name }}" {{ 'selected' if request.args.get('dept')==r.dept_name }}>{{ r.dept_name }}</option>
+        {% endif %}
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label style="font-size:12px;color:#6b7280;display:block;margin-bottom:4px;font-weight:500;">Status</label>
+    <select id="filterStatus" class="form-input" style="width:155px;" onchange="applyFilters()">
+      <option value="">All Status</option>
+      <option value="Present"    {{ 'selected' if request.args.get('status')=='Present'    }}>✅ Present</option>
+      <option value="Absent"     {{ 'selected' if request.args.get('status')=='Absent'     }}>❌ Absent</option>
+      <option value="Leave"      {{ 'selected' if request.args.get('status')=='Leave'      }}>🌿 Leave</option>
+      <option value="Not Marked" {{ 'selected' if request.args.get('status')=='Not Marked' }}>— Not Marked</option>
+    </select>
+  </div>
+
+  <div>
+    <button onclick="resetFilters()"
+      style="padding:9px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;">
+      ↺ Reset
+    </button>
+  </div>
+
+  <div style="margin-left:auto;align-self:center;">
+    <span id="filterCount" style="font-size:13px;color:#6b7280;background:#f9fafb;border:1px solid #e5e7eb;border-radius:20px;padding:5px 14px;">
+      Showing all employees
+    </span>
+  </div>
+
+</div>
+
+<!-- ── Weekend / Future Date Warning Banner ─────────────────────────────── -->
+{% if is_weekend %}
+<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:10px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:20px;">🏖️</span>
+  <div>
+    <strong style="color:#92400e;">Weekend — No Attendance</strong>
+    <div style="font-size:12px;color:#b45309;">{{ date_str }} is a Saturday or Sunday. Attendance cannot be marked on weekends.</div>
+  </div>
+</div>
+{% elif is_future %}
+<div style="background:#fee2e2;border:1px solid #ef4444;border-radius:10px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:20px;">📅</span>
+  <div>
+    <strong style="color:#991b1b;">Future Date Selected</strong>
+    <div style="font-size:12px;color:#b91c1c;">{{ date_str }} is in the future. You can only mark attendance for today or past weekdays.</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Attendance Table ───────────────────────────────────────────────────── -->
+<div class="chart-card" style="margin-bottom:0;">
+
+    <!-- ── Bulk Mark Toolbar (HR/Admin only) ──────────────────────────────── -->
+    {% if session.role in ('admin','hr') %}
+    <div style="background:#F2F3F8;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+
+      <!-- Select All checkbox -->
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"
+               style="width:16px;height:16px;accent-color:#7F77DD;cursor:pointer;">
+        Select All
+      </label>
+
+      <div style="width:1px;height:24px;background:#ddd;"></div>
+
+      <!-- Status dropdown + Apply to Selected -->
+      <select id="bulkStatusSel" class="form-input" style="width:150px;padding:7px 10px;font-size:13px;">
+        <option value="Present">✅ Present</option>
+        <option value="Absent">❌ Absent</option>
+        <option value="Leave">🌿 Leave</option>
+      </select>
+
+      <button onclick="applyToSelected()"
+        style="padding:7px 16px;background:#7F77DD;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+        Apply to Selected
+      </button>
+
+      <div style="width:1px;height:24px;background:#ddd;"></div>
+
+      <!-- Quick shortcut buttons -->
+      <button onclick="markAll('Present')"
+        style="padding:7px 14px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        ✅ Mark All Present
+      </button>
+      <button onclick="markAll('Absent')"
+        style="padding:7px 14px;background:#D85A30;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+        ❌ Mark All Absent
+      </button>
+
+      <!-- Selected count badge -->
+      <span id="selectedCount" style="font-size:12px;color:#7F77DD;font-weight:600;display:none;margin-left:4px;">
+        0 selected
+      </span>
+
+    </div>
+
+    <!-- Hidden bulk form -->
+    <form id="bulkForm" method="POST" action="{{ url_for('attendance_bulk_mark') }}">
+      <input type="hidden" name="date"        id="bulkDate"   value="{{ date_str }}">
+      <input type="hidden" name="bulk_status" id="bulkStatus" value="Present">
+      <input type="hidden" name="mark_all"    id="bulkAll"    value="0">
+      <!-- Dynamic emp_ids[] inputs appended by JS -->
+    </form>
+    {% endif %}
+
+    <div class="chart-header" style="margin-bottom:10px;">
+      <h3>Attendance — {{ date_str }}</h3>
+      <span class="badge badge-blue">{{ records|length }} employees</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+    <table class="data-table" id="attTable" style="min-width:600px;">
+      <thead>
+        <tr>
+          {% if session.role in ('admin','hr') %}
+          <th style="width:40px;text-align:center;">☑</th>
+          {% endif %}
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Status</th>
+          <th>Check In (IST)</th>
+          <th>Check Out (IST)</th>
+          <th style="text-align:center;">Att %</th>
+          {% if session.role in ('admin','hr') %}<th>Mark</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody id="attTableBody">
+        {% for r in records %}
+        {% set es = emp_stats.get(r.employee_id, {}) %}
+        {% set pct = es.get('pct', 0) %}
+        <tr data-dept="{{ r.dept_name }}" data-status="{{ 'Not Marked' if (not r.status or r.status == '—') else r.status }}">
+
+          {% if session.role in ('admin','hr') %}
+          <td style="text-align:center;">
+            <input type="checkbox" class="emp-check" value="{{ r.employee_id }}"
+                   onchange="updateSelectedCount()"
+                   style="width:16px;height:16px;accent-color:#7F77DD;cursor:pointer;">
+          </td>
+          {% endif %}
+
+          <td><strong>{{ r.name }}</strong></td>
+
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;">
+              {% if r.dept_name == 'Engineering' %}🔧
+              {% elif r.dept_name == 'Human Resources' %}👥
+              {% elif r.dept_name == 'Finance' %}💰
+              {% elif r.dept_name == 'Marketing' %}📣
+              {% else %}🏢{% endif %}
+              {{ r.dept_name }}
+            </span>
+          </td>
+
+          <td>
+            <span class="badge badge-{{ 'green' if r.status=='Present' else ('red' if r.status=='Absent' else ('orange' if r.status=='Leave' else 'grey')) }}">
+              {{ r.status if r.status != '—' else 'Not Marked' }}
+            </span>
+          </td>
+
+          <td style="font-size:13px;">
+            {% if r.check_in and r.check_in != '—' %}
+              {% set parts = r.check_in.split(':') %}
+              {% set h = parts[0]|int %}
+              {% set m = parts[1] %}
+              {% set period = 'AM' if h < 12 else 'PM' %}
+              {% set h12 = h % 12 %}
+              {% set h12 = 12 if h12 == 0 else h12 %}
+              <span style="color:#166534;font-weight:500;">{{ '%02d'|format(h12) }}:{{ m }} {{ period }} IST</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:13px;">
+            {% if r.check_out and r.check_out != '—' %}
+              {% set parts = r.check_out.split(':') %}
+              {% set h = parts[0]|int %}
+              {% set m = parts[1] %}
+              {% set period = 'AM' if h < 12 else 'PM' %}
+              {% set h12 = h % 12 %}
+              {% set h12 = 12 if h12 == 0 else h12 %}
+              <span style="color:#991b1b;font-weight:500;">{{ '%02d'|format(h12) }}:{{ m }} {{ period }} IST</span>
+            {% else %}—{% endif %}
+          </td>
+
+          <!-- Attendance % column -->
+          <td style="text-align:center;">
+            {% if pct > 0 %}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font-size:13px;font-weight:700;color:{% if pct >= 75 %}#1D9E75{% elif pct >= 50 %}#BA7517{% else %}#D85A30{% endif %};">
+                {{ pct }}%
+              </span>
+              <div style="width:52px;height:5px;background:#eee;border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:{{ pct }}%;background:{% if pct >= 75 %}#1D9E75{% elif pct >= 50 %}#BA7517{% else %}#D85A30{% endif %};border-radius:4px;"></div>
+              </div>
+            </div>
+            {% else %}
+            <span style="color:#ccc;font-size:12px;">—</span>
+            {% endif %}
+          </td>
+
+          {% if session.role in ('admin','hr') %}
+          <td>
+            <div style="display:flex;gap:4px;">
+              {% if is_weekend or is_future %}
+                <span style="font-size:11px;color:#9ca3af;font-style:italic;">
+                  {{ 'Weekend' if is_weekend else 'Future' }}
+                </span>
+              {% else %}
+                {% for st, col in [('Present','green'),('Absent','red'),('Leave','orange')] %}
+                <form method="POST"
+                      action="{{ url_for('mark_attendance', date=date_str, dept=request.args.get('dept',''), status=request.args.get('status','')) }}"
+                      style="margin:0;">
+                  <input type="hidden" name="employee_id" value="{{ r.employee_id }}">
+                  <input type="hidden" name="date"        value="{{ date_str }}">
+                  <input type="hidden" name="status"      value="{{ st }}">
+                  <button type="submit" class="btn btn-xs btn-{{ col }}" title="Mark {{ st }}">{{ st[:1] }}</button>
+                </form>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </td>
+          {% endif %}
+
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr id="noResultRow" style="display:none;">
+          <td colspan="8" style="text-align:center;padding:32px;color:#9ca3af;font-size:14px;">
+            😕 No employees match the selected filters.
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+// ── Filter Logic ──────────────────────────────────────────────────────────────
+function applyFilters() {
+  const deptVal   = document.getElementById('filterDept').value.trim().toLowerCase();
+  const statusVal = document.getElementById('filterStatus').value.trim().toLowerCase();
+  const rows      = document.querySelectorAll('#attTableBody tr');
+  const noResult  = document.getElementById('noResultRow');
+  let visible = 0;
+  rows.forEach(row=>{
+    const d=(row.dataset.dept||'').toLowerCase();
+    const s=(row.dataset.status||'').toLowerCase();
+    const ok=(!deptVal||d===deptVal)&&(!statusVal||s===statusVal||(!statusVal&&true));
+    row.style.display = ok ? '' : 'none';
+    if(ok) visible++;
+  });
+  noResult.style.display = visible===0 ? '' : 'none';
+  const badge=document.getElementById('filterCount');
+  badge.textContent = (!deptVal&&!statusVal) ? `Showing all ${rows.length} employees` : `${visible} of ${rows.length} employees`;
+  badge.style.color  = visible===0?'#ef4444':'#1D9E75';
+
+  // Update export link with correct month params
+  const eBtn = document.getElementById('exportBtn');
+  if(eBtn) {
+    const d = document.getElementById('dateInput').value;
+    const parts = d ? d.split('-') : [];
+    if(parts.length===3) eBtn.href = `/attendance/export-excel?month=${parseInt(parts[1])}&year=${parts[0]}`;
+  }
+
+  const params=new URLSearchParams(window.location.search);
+  if(deptVal) params.set('dept',document.getElementById('filterDept').value); else params.delete('dept');
+  if(statusVal) params.set('status',document.getElementById('filterStatus').value); else params.delete('status');
+  window.history.replaceState(null,'',window.location.pathname+'?'+params.toString());
+}
+
+function resetFilters() {
+  const params=new URLSearchParams(window.location.search);
+  params.delete('dept'); params.delete('status');
+  window.location.href=window.location.pathname+'?'+params.toString();
+}
+
+// ── Bulk Mark Logic ───────────────────────────────────────────────────────────
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.emp-check').forEach(c=>{
+    // Only check visible rows
+    const row = c.closest('tr');
+    if(row && row.style.display !== 'none') c.checked = cb.checked;
+  });
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const checked = [...document.querySelectorAll('.emp-check:checked')].length;
+  const badge   = document.getElementById('selectedCount');
+  if(badge) {
+    badge.style.display = checked>0 ? 'inline' : 'none';
+    badge.textContent   = `${checked} selected`;
+  }
+  // Sync select-all checkbox state
+  const all = document.querySelectorAll('.emp-check').length;
+  const sa  = document.getElementById('selectAll');
+  if(sa) sa.indeterminate = checked>0 && checked<all;
+  if(sa) sa.checked = checked===all && all>0;
+}
+
+function applyToSelected() {
+  const checked = [...document.querySelectorAll('.emp-check:checked')];
+  if(checked.length===0) { alert('Please select at least one employee first.'); return; }
+  const status = document.getElementById('bulkStatusSel').value;
+  if(!confirm(`Mark ${checked.length} employee(s) as "${status}"?`)) return;
+  submitBulk(status, false, checked.map(c=>c.value));
+}
+
+function markAll(status) {
+  const total = document.querySelectorAll('.emp-check').length;
+  if(!confirm(`Mark ALL ${total} employees as "${status}" for {{ date_str }}?`)) return;
+  submitBulk(status, true, []);
+}
+
+function submitBulk(status, allFlag, empIds) {
+  const form = document.getElementById('bulkForm');
+  // Remove old emp_ids inputs
+  form.querySelectorAll('[name="emp_ids[]"]').forEach(el=>el.remove());
+  document.getElementById('bulkStatus').value = status;
+  document.getElementById('bulkAll').value    = allFlag ? '1' : '0';
+  document.getElementById('bulkDate').value   = '{{ date_str }}';
+  if(!allFlag) {
+    empIds.forEach(id=>{
+      const inp = document.createElement('input');
+      inp.type='hidden'; inp.name='emp_ids[]'; inp.value=id;
+      form.appendChild(inp);
+    });
+  }
+  form.submit();
+}
+
+// Init on page load
+applyFilters();
+</script>
+{% endblock %}

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayrollPro — Create Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand:      #e85d42;
+      --brand-dk:   #c94a30;
+      --brand-glow: rgba(232,93,66,.22);
+      --navy:       #1a2035;
+      --text-2:     #a8b8d0;
+      --text-3:     #5577aa;
+      --font:       'DM Sans', system-ui, sans-serif;
+      --mono:       'DM Mono', monospace;
+    }
+    html, body { height: 100%; font-family: var(--font); background: var(--navy); color: #fff; overflow-x: hidden; }
+
+    .page-bg {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a2035 0%, #1e2d50 55%, #162040 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px 20px; position: relative; overflow: hidden;
+    }
+    .page-bg::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 48px 48px; pointer-events: none;
+    }
+    .orb { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
+    .orb-1 { width: 520px; height: 520px; background: rgba(232,93,66,.13); top: -140px; left: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: rgba(79,70,229,.1);  bottom: -80px; right: -80px; }
+
+    /* Card */
+    .reg-wrap {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 480px;
+      background: rgba(255,255,255,.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px;
+      padding: 44px 40px;
+      box-shadow: 0 40px 100px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
+    }
+    @media (max-width: 520px) { .reg-wrap { padding: 32px 22px; } }
+
+    /* Header */
+    .brand-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 28px;
+    }
+    .brand-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: #1C1B2E;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-name { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -.4px; line-height: 1.15; }
+    .brand-name span { color: #e85d42; }
+    .brand-sub  { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #4a5a7a; margin-top: 2px; display: block; }
+
+    .form-eyebrow {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--brand); margin-bottom: 8px;
+    }
+    .form-title  { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -.4px; margin-bottom: 5px; }
+    .form-sub    { font-size: 13px; color: var(--text-2); margin-bottom: 26px; line-height: 1.5; }
+
+    /* Alert */
+    .alert-err {
+      background: rgba(220,38,38,.15); border: 1px solid rgba(220,38,38,.3);
+      color: #fca5a5; border-radius: 9px; padding: 10px 14px;
+      font-size: 13px; margin-bottom: 18px;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .alert-ok {
+      background: rgba(5,150,105,.15); border: 1px solid rgba(5,150,105,.3);
+      color: #6ee7b7; border-radius: 9px; padding: 10px 14px;
+      font-size: 13px; margin-bottom: 18px;
+      display: flex; gap: 8px; align-items: center;
+    }
+
+    /* Form grid — 2 cols for name+username */
+    .fgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+    @media (max-width: 440px) { .fgrid { grid-template-columns: 1fr; } }
+
+    .fgroup { margin-bottom: 16px; }
+    .fgroup label {
+      display: block; font-size: 11.5px; font-weight: 600;
+      color: var(--text-2); text-transform: uppercase;
+      letter-spacing: .05em; margin-bottom: 7px;
+    }
+    .finput {
+      width: 100%; padding: 11px 14px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 9px; color: #fff;
+      font-family: var(--font); font-size: 13.5px;
+      outline: none; transition: border-color .2s, background .2s;
+    }
+    .finput::placeholder { color: rgba(255,255,255,.28); }
+    .finput:focus {
+      border-color: var(--brand);
+      background: rgba(255,255,255,.1);
+      box-shadow: 0 0 0 3px rgba(232,93,66,.14);
+    }
+    .pw-wrap { position: relative; }
+    .pw-wrap .finput { padding-right: 44px; }
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      font-size: 15px; color: rgba(255,255,255,.3);
+      line-height: 1; transition: color .15s;
+    }
+    .pw-toggle:hover { color: rgba(255,255,255,.65); }
+
+    /* Password strength bar */
+    .strength-bar-wrap {
+      height: 3px; background: rgba(255,255,255,.1);
+      border-radius: 2px; margin-top: 6px; overflow: hidden;
+    }
+    .strength-bar { height: 100%; border-radius: 2px; width: 0; transition: width .3s, background .3s; }
+    .strength-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+    /* Submit */
+    .btn-primary {
+      width: 100%; padding: 12px;
+      background: var(--brand); color: #fff;
+      border: none; border-radius: 9px;
+      font-family: var(--font); font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all .2s;
+      box-shadow: 0 4px 16px var(--brand-glow);
+      letter-spacing: .01em; margin-top: 4px;
+    }
+    .btn-primary:hover { background: var(--brand-dk); transform: translateY(-1px); box-shadow: 0 8px 24px var(--brand-glow); }
+
+    /* Footer */
+    .form-footer {
+      text-align: center; margin-top: 20px;
+      font-size: 13px; color: var(--text-2);
+    }
+    .form-footer a { color: var(--brand); font-weight: 600; }
+    .form-footer a:hover { text-decoration: underline; }
+
+    /* Back */
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      position: absolute; top: 24px; left: 28px; z-index: 10;
+      font-size: 13px; font-weight: 500; color: var(--text-2);
+      transition: color .15s; text-decoration: none;
+    }
+    .back-link:hover { color: #fff; }
+
+    /* Terms note */
+    .terms-note {
+      font-size: 11.5px; color: var(--text-3);
+      text-align: center; margin-top: 14px; line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="page-bg">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <a href="{{ url_for('home') }}" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Back to Home
+  </a>
+
+  <div class="reg-wrap">
+
+    <div class="brand-row">
+            <div class="brand-icon">
+        <svg width="36" height="36" viewBox="0 0 36 36" style="display:block;">
+          <rect x="7"  y="7"  width="7"  height="22" rx="2.5" fill="#ffffff"/>
+          <rect x="14" y="7"  width="13" height="6"  rx="2.5" fill="#E85D42"/>
+          <rect x="21" y="7"  width="6"  height="16" rx="2.5" fill="#E85D42"/>
+          <rect x="14" y="17" width="13" height="6"  rx="2.5" fill="#E85D42"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Payroll<span>Pro</span></span>
+        <span class="brand-sub">Management System</span>
+      </div>
+    </div>
+
+    <div class="form-eyebrow">Company Owner / Admin</div>
+    <div class="form-title">Create Admin Account</div>
+    <div class="form-sub">You'll have full access to manage employees, payroll, attendance and more.</div>
+
+    <!-- Admin info note -->
+    <div style="background:rgba(232,93,66,.1);border:1px solid rgba(232,93,66,.22);border-radius:10px;padding:11px 14px;margin-bottom:20px;display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:#ffb8a8;line-height:1.55;">
+      <span style="flex-shrink:0;margin-top:1px;">🛡️</span>
+      <span>This account will be created as <strong style="color:#ffd0c2;">System Administrator</strong>. After login, you can add HR staff and employees from your dashboard.</span>
+    </div>
+
+    {% if error %}
+    <div class="alert-err">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('register') }}" autocomplete="on">
+
+      <div class="fgrid">
+        <div class="fgroup">
+          <label>Full Name *</label>
+          <input type="text" name="full_name" class="finput" placeholder="Amit Singh" required autocomplete="name">
+        </div>
+        <div class="fgroup">
+          <label>Username *</label>
+          <input type="text" name="username" class="finput" placeholder="amit" required autocomplete="username">
+        </div>
+      </div>
+
+      <div class="fgroup">
+        <label>Email Address *</label>
+        <input type="email" name="email" class="finput" placeholder="amit@company.com" required autocomplete="email">
+      </div>
+
+      <div class="fgrid">
+        <div class="fgroup">
+          <label>Password *</label>
+          <div class="pw-wrap">
+            <input type="password" name="password" id="pw1" class="finput"
+                   placeholder="Min. 6 characters" required autocomplete="new-password"
+                   oninput="checkStrength(this.value)">
+            <button type="button" class="pw-toggle" onclick="togglePw('pw1')">👁</button>
+          </div>
+          <div class="strength-bar-wrap"><div class="strength-bar" id="strengthBar"></div></div>
+          <div class="strength-hint" id="strengthHint"></div>
+        </div>
+        <div class="fgroup">
+          <label>Confirm Password *</label>
+          <div class="pw-wrap">
+            <input type="password" name="confirm_password" id="pw2" class="finput"
+                   placeholder="Repeat password" required autocomplete="new-password">
+            <button type="button" class="pw-toggle" onclick="togglePw('pw2')">👁</button>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary">Create Admin Account →</button>
+    </form>
+
+    <div class="terms-note">
+      By creating an account you agree to the internal HR policies of your organization.
+    </div>
+
+    <div class="form-footer">
+      Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function togglePw(id) {
+  const f = document.getElementById(id);
+  f.type = (f.type === 'password') ? 'text' : 'password';
+}
+function checkStrength(val) {
+  const bar  = document.getElementById('strengthBar');
+  const hint = document.getElementById('strengthHint');
+  let score = 0;
+  if (val.length >= 6)  score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const levels = [
+    { w:'0%',   bg:'transparent', txt:'' },
+    { w:'25%',  bg:'#dc2626',     txt:'Weak' },
+    { w:'50%',  bg:'#d97706',     txt:'Fair' },
+    { w:'75%',  bg:'#0ea5e9',     txt:'Good' },
+    { w:'100%', bg:'#059669',     txt:'Strong' },
+  ];
+  const lvl = levels[Math.min(score, 4)];
+  bar.style.width      = lvl.w;
+  bar.style.background = lvl.bg;
+  hint.textContent     = lvl.txt;
+  hint.style.color     = lvl.bg;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+# Databases — all of them
+payroll.db
+payroll.db-shm
+payroll.db-wal
+payroll_alfred.db
+payroll_demo.db
+payroll_sucheth.db
+payroll_alfred.db-shm
+payroll_alfred.db-wal
+payroll_demo.db-shm
+payroll_demo.db-wal
+payroll_sucheth.db-shm
+payroll_sucheth.db-wal
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+*.log
+
+# IDE folders
+.idea/
+
+# Utility/fix scripts — not needed for deployment
+check_all_dbs.py
+create_fresh_admins.py
+direct_fix.py
+fix_self_registered_admins.py
+migrate.py
+migrate_announcements.py
+migrate_gender.py
+migrate_to_multitenant.py
+migrate_user_status.py
+reset_admin_password.py
+seed_performance.py
+
+# Synopsis folder (college docs, not app code)
+synopsis/

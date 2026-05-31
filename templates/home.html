@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayrollPro — Modern HR & Payroll Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand:      #e85d42;
+      --brand-dk:   #c94a30;
+      --brand-glow: rgba(232,93,66,.18);
+      --navy:       #1a2035;
+      --navy-mid:   #243050;
+      --bg:         #f7f8fc;
+      --surface:    #ffffff;
+      --border:     #e4e8ed;
+      --text-1:     #111827;
+      --text-2:     #4b5768;
+      --text-3:     #8a95a3;
+      --font:       'DM Sans', system-ui, sans-serif;
+      --mono:       'DM Mono', monospace;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); color: var(--text-1); background: #fff; line-height: 1.6; overflow-x: hidden; }
+    a { text-decoration: none; }
+
+    /* ── NAV ─────────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 7%;
+      height: 64px;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(228,232,237,.6);
+      transition: box-shadow .2s;
+    }
+    nav.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,.08); }
+    .nav-logo { display: flex; align-items: center; gap: 10px; }
+    .nav-logo-icon {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--brand); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 15px; letter-spacing: -.5px;
+    }
+    .nav-logo-name { font-size: 16px; font-weight: 700; color: var(--navy); letter-spacing: -.3px; }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a { font-size: 13.5px; font-weight: 500; color: var(--text-2); transition: color .15s; }
+    .nav-links a:hover { color: var(--brand); }
+    .nav-cta { display: flex; gap: 10px; align-items: center; }
+    .btn-nav-ghost {
+      font-size: 13px; font-weight: 600; color: var(--text-2);
+      padding: 7px 16px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; transition: all .15s;
+    }
+    .btn-nav-ghost:hover { border-color: var(--brand); color: var(--brand); }
+    .btn-nav-primary {
+      font-size: 13px; font-weight: 600; color: #fff;
+      padding: 8px 18px; border-radius: 8px;
+      background: var(--brand); transition: all .15s;
+      box-shadow: 0 2px 8px var(--brand-glow);
+    }
+    .btn-nav-primary:hover { background: var(--brand-dk); box-shadow: 0 4px 16px var(--brand-glow); }
+    @media(max-width:768px){ .nav-links { display:none; } }
+
+    /* ── HERO ────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--navy) 0%, #1e2d50 55%, #162040 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 100px 7% 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Background grid */
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    /* Glow orbs */
+    .hero-orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); pointer-events: none;
+    }
+    .orb-1 { width: 500px; height: 500px; background: rgba(232,93,66,.18); top: -100px; right: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: rgba(79,70,229,.12); bottom: -80px; left: -60px; }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(232,93,66,.15); color: #ff9d87;
+      border: 1px solid rgba(232,93,66,.3);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 12.5px; font-weight: 600; margin-bottom: 28px;
+      position: relative;
+    }
+    .hero-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+    .hero h1 {
+      font-size: clamp(38px, 6vw, 68px);
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      max-width: 820px;
+      margin-bottom: 22px;
+      position: relative;
+    }
+    .hero h1 span { color: var(--brand); }
+
+    .hero-sub {
+      font-size: clamp(15px, 2vw, 18px);
+      color: #8899bb;
+      max-width: 540px;
+      margin-bottom: 40px;
+      line-height: 1.7;
+      position: relative;
+    }
+
+    .hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; position: relative; }
+    .btn-hero-primary {
+      font-size: 15px; font-weight: 700; color: #fff;
+      padding: 13px 30px; border-radius: 10px;
+      background: var(--brand);
+      box-shadow: 0 4px 20px var(--brand-glow);
+      transition: all .2s;
+    }
+    .btn-hero-primary:hover { background: var(--brand-dk); transform: translateY(-2px); box-shadow: 0 8px 28px var(--brand-glow); }
+    .btn-hero-ghost {
+      font-size: 15px; font-weight: 600; color: #c8d8e8;
+      padding: 13px 28px; border-radius: 10px;
+      border: 1.5px solid rgba(255,255,255,.15);
+      background: rgba(255,255,255,.05);
+      transition: all .2s; backdrop-filter: blur(4px);
+    }
+    .btn-hero-ghost:hover { border-color: rgba(255,255,255,.35); color: #fff; background: rgba(255,255,255,.1); }
+
+    /* Hero stats strip */
+    .hero-stats {
+      display: flex; gap: 48px; justify-content: center; flex-wrap: wrap;
+      margin-top: 64px; position: relative;
+    }
+    .hero-stat-val { font-size: 30px; font-weight: 800; color: #fff; line-height: 1; font-family: var(--mono); }
+    .hero-stat-lbl { font-size: 12px; color: #5577aa; font-weight: 500; margin-top: 4px; }
+    .hero-stat-div { width: 1px; background: rgba(255,255,255,.1); }
+
+    /* Dashboard mockup */
+    .hero-mockup {
+      position: relative;
+      margin-top: 72px;
+      max-width: 900px;
+      width: 100%;
+    }
+    .mockup-frame {
+      background: var(--navy-mid);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      overflow: hidden;
+      box-shadow: 0 40px 100px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.05);
+    }
+    .mockup-bar {
+      background: rgba(255,255,255,.04);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .mockup-body { padding: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+    .mockup-card {
+      background: rgba(255,255,255,.05);
+      border-radius: 10px; border: 1px solid rgba(255,255,255,.07);
+      padding: 14px;
+    }
+    .mc-val { font-size: 22px; font-weight: 700; color: #fff; font-family: var(--mono); }
+    .mc-lbl { font-size: 10px; color: #5577aa; margin-top: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+    .mc-bar { height: 3px; border-radius: 2px; margin-top: 10px; }
+    .mockup-chart { grid-column: span 4; background: rgba(255,255,255,.04); border-radius: 10px; border: 1px solid rgba(255,255,255,.07); padding: 14px 18px; }
+    .mockup-chart-title { font-size: 11px; color: #5577aa; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 12px; }
+    .mockup-bars { display: flex; align-items: flex-end; gap: 6px; height: 60px; }
+    .mockup-bar-item { flex: 1; border-radius: 4px 4px 0 0; opacity: .8; }
+
+    /* ── FEATURES ─────────────────────────────────────────── */
+    .section { padding: 96px 7%; }
+    .section-tag {
+      display: inline-block;
+      font-size: 11.5px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--brand);
+      background: var(--brand-glow); border-radius: 4px;
+      padding: 4px 10px; margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800; color: var(--navy);
+      letter-spacing: -.8px; line-height: 1.15;
+      margin-bottom: 14px;
+    }
+    .section-sub { font-size: 16px; color: var(--text-2); max-width: 520px; line-height: 1.7; }
+    .section-header { margin-bottom: 56px; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    @media(max-width:900px){ .features-grid { grid-template-columns: 1fr 1fr; } }
+    @media(max-width:600px){ .features-grid { grid-template-columns: 1fr; } }
+
+    .feat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: box-shadow .2s, transform .2s, border-color .2s;
+      position: relative; overflow: hidden;
+    }
+    .feat-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--fc, var(--brand));
+      transform: scaleX(0); transform-origin: left;
+      transition: transform .3s;
+    }
+    .feat-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.08); transform: translateY(-3px); border-color: transparent; }
+    .feat-card:hover::before { transform: scaleX(1); }
+    .feat-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 18px;
+      background: var(--fib, #fff0ee);
+    }
+    .feat-title { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .feat-desc  { font-size: 13.5px; color: var(--text-2); line-height: 1.65; }
+
+    /* ── HOW IT WORKS ─────────────────────────────────────── */
+    .steps-section { background: var(--navy); padding: 96px 7%; }
+    .steps-section .section-title { color: #fff; }
+    .steps-section .section-sub   { color: #6a8099; }
+    .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; margin-top: 56px; }
+    @media(max-width:900px){ .steps-grid { grid-template-columns: 1fr 1fr; } }
+    @media(max-width:600px){ .steps-grid { grid-template-columns: 1fr; } }
+    .step-card {
+      text-align: center; padding: 32px 20px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px;
+      position: relative;
+    }
+    .step-num {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--brand); color: #fff;
+      font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .step-icon { font-size: 28px; margin-bottom: 12px; }
+    .step-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .step-desc  { font-size: 13px; color: #6a8099; line-height: 1.6; }
+    /* Connector line */
+    .step-card:not(:last-child)::after {
+      content: '→';
+      position: absolute; top: 32px; right: -20px;
+      color: rgba(232,93,66,.4); font-size: 18px;
+    }
+    @media(max-width:900px){ .step-card:not(:last-child)::after { display:none; } }
+
+    /* ── ROLES ───────────────────────────────────────────── */
+    .roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    @media(max-width:700px){ .roles-grid { grid-template-columns: 1fr; } }
+    .role-card {
+      border-radius: 16px; padding: 32px 28px;
+      border: 1px solid var(--border);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .role-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,.1); }
+    .role-avatar { font-size: 36px; margin-bottom: 16px; }
+    .role-title { font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+    .role-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 18px; }
+    .role-list  { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .role-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--text-2); }
+    .role-list li::before { content: '✓'; color: var(--brand); font-weight: 700; flex-shrink: 0; }
+
+    /* ── STATS BAND ──────────────────────────────────────── */
+    .stats-band {
+      background: var(--brand);
+      padding: 56px 7%;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 32px; text-align: center;
+    }
+    @media(max-width:700px){ .stats-band { grid-template-columns: 1fr 1fr; } }
+    .band-val { font-size: 36px; font-weight: 800; color: #fff; font-family: var(--mono); }
+    .band-lbl { font-size: 13px; color: rgba(255,255,255,.75); margin-top: 4px; }
+
+    /* ── CTA SECTION ─────────────────────────────────────── */
+    .cta-section {
+      background: linear-gradient(135deg, var(--navy) 0%, #1e2d50 100%);
+      padding: 96px 7%; text-align: center; position: relative; overflow: hidden;
+    }
+    .cta-section::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .cta-section h2 { font-size: clamp(28px,4vw,44px); font-weight: 800; color: #fff; letter-spacing: -.8px; margin-bottom: 14px; position: relative; }
+    .cta-section p  { font-size: 16px; color: #6a8099; margin-bottom: 36px; position: relative; }
+    .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; position: relative; }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    footer {
+      background: #0f1520; padding: 40px 7%;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-brand { display: flex; align-items: center; gap: 10px; }
+    .footer-logo {
+      width: 30px; height: 30px; border-radius: 7px;
+      background: var(--brand); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px;
+    }
+    .footer-name { font-size: 14px; font-weight: 700; color: #c8d8e8; }
+    .footer-copy { font-size: 12px; color: #3a4a5a; }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 12.5px; color: #3a4a5a; transition: color .15s; }
+    .footer-links a:hover { color: var(--brand); }
+
+    /* ── LOGO KEYFRAMES ──────────────────────────────────── */
+    @keyframes ppStem  { from{opacity:0;transform:scaleY(0)} to{opacity:1;transform:scaleY(1)} }
+    @keyframes ppBar   { from{opacity:0;transform:scaleX(0)} to{opacity:1;transform:scaleX(1)} }
+
+    /* ── HERO ENTRANCE ───────────────────────────────────── */
+    @keyframes fadeUp  { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes floatUp { from{opacity:0;transform:translateY(48px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes mockupFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @keyframes barGrow { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+
+    .hero-badge  { animation: fadeUp .6s .1s both; }
+    .hero h1     { animation: fadeUp .7s .25s both; }
+    .hero-sub    { animation: fadeUp .6s .45s both; }
+    .hero-cta    { animation: fadeUp .6s .6s both; }
+    .hero-stats  { animation: fadeUp .6s .75s both; }
+    .hero-mockup { animation: floatUp .8s .9s both; }
+    .hero-mockup .mockup-frame { animation: mockupFloat 6s 1.8s ease-in-out infinite; }
+    .mc-bar { transform-origin: left; animation: barGrow .9s 1.6s both; }
+
+    /* ── SCROLL REVEAL ───────────────────────────────────── */
+    .reveal {
+      opacity: 0; transform: translateY(32px);
+      transition: opacity .65s cubic-bezier(.22,1,.36,1), transform .65s cubic-bezier(.22,1,.36,1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-scale {
+      opacity: 0; transform: scale(.94);
+      transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1);
+    }
+    .reveal-scale.visible { opacity: 1; transform: scale(1); }
+    .stagger-1 { transition-delay: .07s !important; }
+    .stagger-2 { transition-delay: .14s !important; }
+    .stagger-3 { transition-delay: .21s !important; }
+    .stagger-4 { transition-delay: .28s !important; }
+    .stagger-5 { transition-delay: .35s !important; }
+    .stagger-6 { transition-delay: .42s !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────── -->
+<nav id="navbar">
+  <div class="nav-logo">
+    <div class="nav-logo-icon" style="background:#1C1B2E;overflow:hidden;position:relative;">
+      <svg width="34" height="34" viewBox="0 0 34 34" style="display:block;">
+        <rect x="6"  y="6"  width="6"  height="22" rx="2" fill="#ffffff" style="transform-origin:50% 0%;animation:ppStem .4s .1s cubic-bezier(.34,1.56,.64,1) both;"/>
+        <rect x="12" y="6"  width="12" height="5"  rx="2" fill="#E85D42" style="transform-origin:0% 50%;animation:ppBar .35s .35s cubic-bezier(.34,1.56,.64,1) both;"/>
+        <rect x="19" y="6"  width="5"  height="15" rx="2" fill="#E85D42" style="transform-origin:50% 0%;animation:ppStem .35s .55s cubic-bezier(.34,1.56,.64,1) both;"/>
+        <rect x="12" y="16" width="12" height="5"  rx="2" fill="#E85D42" style="transform-origin:0% 50%;animation:ppBar .35s .75s cubic-bezier(.34,1.56,.64,1) both;"/>
+      </svg>
+    </div>
+    <span class="nav-logo-name">PayrollPro</span>
+  </div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#roles">Roles</a>
+  </div>
+  <div class="nav-cta">
+    <a href="{{ url_for('login') }}" class="btn-nav-ghost">Sign In</a>
+    <a href="{{ url_for('register') }}" class="btn-nav-primary">Get Started →</a>
+  </div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-orb orb-1"></div>
+  <div class="hero-orb orb-2"></div>
+
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Built for Indian Enterprises · IST Time-Aware
+  </div>
+
+  <h1>
+    Modern Payroll &<br>
+    <span>HR Management</span><br>
+    Made Simple
+  </h1>
+
+  <p class="hero-sub">
+    Automate payroll, track attendance, manage leaves, and gain real-time performance insights — all in one clean dashboard.
+  </p>
+
+  <div class="hero-cta">
+    <a href="{{ url_for('login') }}" class="btn-hero-primary">Get Started Free →</a>
+    <a href="#features" class="btn-hero-ghost">Explore Features</a>
+  </div>
+
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-val">100%</div>
+      <div class="hero-stat-lbl">Attendance Accuracy</div>
+    </div>
+    <div class="hero-stat-div"></div>
+    <div>
+      <div class="hero-stat-val">4</div>
+      <div class="hero-stat-lbl">Departments Managed</div>
+    </div>
+    <div class="hero-stat-div"></div>
+    <div>
+      <div class="hero-stat-val">3</div>
+      <div class="hero-stat-lbl">User Roles</div>
+    </div>
+    <div class="hero-stat-div"></div>
+    <div>
+      <div class="hero-stat-val">∞</div>
+      <div class="hero-stat-lbl">Payslips Generated</div>
+    </div>
+  </div>
+
+  <!-- Mini dashboard mockup -->
+  <div class="hero-mockup">
+    <div class="mockup-frame">
+      <div class="mockup-bar">
+        <div class="mockup-dot" style="background:#ff5f57"></div>
+        <div class="mockup-dot" style="background:#febc2e"></div>
+        <div class="mockup-dot" style="background:#28c840"></div>
+        <span style="font-size:11px;color:#4a6280;margin-left:8px;font-family:var(--mono)">PayrollPro Dashboard</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-card">
+          <div class="mc-lbl">Total Employees</div>
+          <div class="mc-val">13</div>
+          <div class="mc-bar" style="background:var(--brand);width:80%"></div>
+        </div>
+        <div class="mockup-card">
+          <div class="mc-lbl">Present Today</div>
+          <div class="mc-val" style="color:#4ade80">11</div>
+          <div class="mc-bar" style="background:#22c55e;width:85%"></div>
+        </div>
+        <div class="mockup-card">
+          <div class="mc-lbl">Pending Leaves</div>
+          <div class="mc-val" style="color:#fbbf24">2</div>
+          <div class="mc-bar" style="background:#f59e0b;width:20%"></div>
+        </div>
+        <div class="mockup-card">
+          <div class="mc-lbl">Monthly Payroll</div>
+          <div class="mc-val" style="color:#818cf8;font-size:16px">₹2.2L</div>
+          <div class="mc-bar" style="background:#6366f1;width:75%"></div>
+        </div>
+        <div class="mockup-chart">
+          <div class="mockup-chart-title">Performance Trend — Last 6 Months</div>
+          <div class="mockup-bars">
+            <div class="mockup-bar-item" style="height:65%;background:var(--brand)"></div>
+            <div class="mockup-bar-item" style="height:70%;background:var(--brand)"></div>
+            <div class="mockup-bar-item" style="height:80%;background:var(--brand)"></div>
+            <div class="mockup-bar-item" style="height:75%;background:var(--brand)"></div>
+            <div class="mockup-bar-item" style="height:90%;background:var(--brand)"></div>
+            <div class="mockup-bar-item" style="height:85%;background:#ff9d87"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURES ──────────────────────────────────────────────────── -->
+<section class="section" id="features" style="background:var(--bg);">
+  <div class="section-header reveal">
+    <div class="section-tag">Features</div>
+    <div class="section-title">Everything HR needs,<br>in one place</div>
+    <div class="section-sub">Built for growing Indian companies with real payroll complexity — PF, attendance deductions, leave management and more.</div>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card reveal stagger-1" style="--fc:#e85d42;--fib:#fff0ee;">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Real-time Dashboard</div>
+      <div class="feat-desc">Live KPI cards showing present/absent/on-leave counts, pending approvals, and monthly payroll totals — all above the fold.</div>
+    </div>
+    <div class="feat-card reveal stagger-2" style="--fc:#1D9E75;--fib:#e8f5ef;">
+      <div class="feat-icon">✅</div>
+      <div class="feat-title">Attendance Tracking</div>
+      <div class="feat-desc">Mark P/A/L per employee with IST clock-in/out times. Weekend validation, bulk marking, and department filters included.</div>
+    </div>
+    <div class="feat-card reveal stagger-3" style="--fc:#4f46e5;--fib:#f0f0ff;">
+      <div class="feat-icon">💰</div>
+      <div class="feat-title">Automated Payroll</div>
+      <div class="feat-desc">Auto-calculates basic pay, deductions, and net salary based on attendance. Download PDF payslips or export full payroll data to Excel instantly.</div>
+    </div>
+    <div class="feat-card reveal stagger-4" style="--fc:#0ea5e9;--fib:#ecfeff;">
+      <div class="feat-icon">🌿</div>
+      <div class="feat-title">Leave Management</div>
+      <div class="feat-desc">12-day Casual Leave balance per employee, apply/approve/reject workflow, leave history and department-wise CL tracking.</div>
+    </div>
+    <div class="feat-card reveal stagger-5" style="--fc:#f59e0b;--fib:#fffbeb;">
+      <div class="feat-icon">📈</div>
+      <div class="feat-title">Performance Analytics</div>
+      <div class="feat-desc">Score employees on punctuality, task completion, teamwork, communication and initiative. View trend charts by department.</div>
+    </div>
+    <div class="feat-card reveal stagger-6" style="--fc:#db2777;--fib:#fdf2f8;">
+      <div class="feat-icon">✉️</div>
+      <div class="feat-title">HR Email System</div>
+      <div class="feat-desc">Send professional HTML emails directly to employees from the dashboard. Logs all communication for audit trail.</div>
+    </div>
+    <div class="feat-card reveal stagger-1" style="--fc:#7c3aed;--fib:#f5f3ff;">
+      <div class="feat-icon">📢</div>
+      <div class="feat-title">Announcements</div>
+      <div class="feat-desc">Post company-wide announcements with priority levels and categories. Employees see updates instantly on their dashboard.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ──────────────────────────────────────────────── -->
+<section class="steps-section" id="how-it-works">
+  <div class="section-tag reveal" style="background:rgba(232,93,66,.2);color:#ff9d87;">How It Works</div>
+  <div class="section-title reveal" style="color:#fff;margin-top:10px;">Up and running in minutes</div>
+  <div class="section-sub reveal" style="color:#6a8099;">No complex setup. Login, run payroll, track attendance.</div>
+  <div class="steps-grid">
+    <div class="step-card reveal stagger-1">
+      <div class="step-num">1</div>
+      <div class="step-icon">👤</div>
+      <div class="step-title">Add Employees</div>
+      <div class="step-desc">Create employee profiles with department, salary, and joining details in seconds.</div>
+    </div>
+    <div class="step-card reveal stagger-2">
+      <div class="step-num">2</div>
+      <div class="step-icon">✅</div>
+      <div class="step-title">Track Attendance</div>
+      <div class="step-desc">Mark daily attendance with IST timestamps. Filter by department or status instantly.</div>
+    </div>
+    <div class="step-card reveal stagger-3">
+      <div class="step-num">3</div>
+      <div class="step-icon">💰</div>
+      <div class="step-title">Run Payroll</div>
+      <div class="step-desc">One click calculates net salaries for all employees based on attendance data.</div>
+    </div>
+    <div class="step-card reveal stagger-4">
+      <div class="step-num">4</div>
+      <div class="step-icon">📄</div>
+      <div class="step-title">Generate Payslips</div>
+      <div class="step-desc">Professional PDF payslips auto-generated and downloadable by employee or HR.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ROLES ─────────────────────────────────────────────────────── -->
+<section class="section" id="roles">
+  <div class="section-header reveal">
+    <div class="section-tag">User Roles</div>
+    <div class="section-title">Built for every person<br>in your organization</div>
+  </div>
+  <div class="roles-grid">
+    <div class="role-card reveal stagger-1" style="background:linear-gradient(135deg,#fff8f7,#fff);">
+      <div class="role-avatar">⚙️</div>
+      <div class="role-title">Admin</div>
+      <div class="role-sub">Full system control</div>
+      <ul class="role-list">
+        <li>Manage all employees & departments</li>
+        <li>Run & process payroll for all</li>
+        <li>View all performance reports</li>
+        <li>Manage announcements & emails</li>
+        <li>Configure system settings</li>
+      </ul>
+    </div>
+    <div class="role-card reveal stagger-2" style="background:linear-gradient(135deg,#f0fff8,#fff);">
+      <div class="role-avatar">👥</div>
+      <div class="role-title">HR Manager</div>
+      <div class="role-sub">People operations</div>
+      <ul class="role-list">
+        <li>Mark & manage attendance</li>
+        <li>Approve or reject leave requests</li>
+        <li>Track CL balance across departments</li>
+        <li>Send emails to employees</li>
+        <li>Export payroll & attendance to Excel/PDF</li>
+        <li>Add performance reviews for employees</li>
+      </ul>
+    </div>
+    <div class="role-card reveal stagger-3" style="background:linear-gradient(135deg,#f0f4ff,#fff);">
+      <div class="role-avatar">🧑‍💼</div>
+      <div class="role-title">Employee</div>
+      <div class="role-sub">Self-service portal</div>
+      <ul class="role-list">
+        <li>View own payslips & salary history</li>
+        <li>Apply for casual or medical leave</li>
+        <li>Check own attendance records</li>
+        <li>View announcements & updates</li>
+        <li>Download PDF payslips</li>
+        <li>View own performance scores & trends</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS BAND ─────────────────────────────────────────────────── -->
+<div class="stats-band">
+  <div class="reveal stagger-1">
+    <div class="band-val" data-count="12">12</div>
+    <div class="band-lbl">CL Days Per Year</div>
+  </div>
+  <div class="reveal stagger-2">
+    <div class="band-val" data-count="5">5</div>
+    <div class="band-lbl">Performance Metrics</div>
+  </div>
+  <div class="reveal stagger-3">
+    <div class="band-val">PDF</div>
+    <div class="band-lbl">Payslip Export</div>
+  </div>
+  <div class="reveal stagger-4">
+    <div class="band-val">Multi</div>
+    <div class="band-lbl">Company Ready</div>
+  </div>
+</div>
+
+<!-- ── CTA ───────────────────────────────────────────────────────── -->
+<section class="cta-section">
+  <h2 class="reveal">Ready to streamline<br>your HR operations?</h2>
+  <p class="reveal stagger-1">Join your team on PayrollPro — it takes less than 2 minutes to get started.</p>
+  <div class="cta-btns reveal stagger-2">
+    <a href="{{ url_for('login') }}"    class="btn-hero-primary">Sign In to Dashboard →</a>
+    <a href="{{ url_for('register') }}" class="btn-hero-ghost">Create Account</a>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-brand">
+    <div class="footer-logo" style="background:#1C1B2E;overflow:hidden;">
+      <svg width="30" height="30" viewBox="0 0 30 30" style="display:block;">
+        <rect x="5"  y="5"  width="5"  height="20" rx="2" fill="#fff"/>
+        <rect x="10" y="5"  width="11" height="4"  rx="2" fill="#E85D42"/>
+        <rect x="17" y="5"  width="4"  height="13" rx="2" fill="#E85D42"/>
+        <rect x="10" y="14" width="11" height="4"  rx="2" fill="#E85D42"/>
+      </svg>
+    </div>
+    <span class="footer-name">PayrollPro</span>
+  </div>
+  <span class="footer-copy">© 2026 PayrollPro. Built for Indian Enterprises.</span>
+  <div class="footer-links">
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}">Register</a>
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#roles">Roles</a>
+  </div>
+</footer>
+
+<script>
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  /* ── Scroll reveal observer ─────────────────────────────── */
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal, .reveal-scale, .reveal-left').forEach(el => {
+    revealObserver.observe(el);
+  });
+
+  /* ── Count-up for numeric band-val elements ─────────────── */
+  function countUp(el, target, duration) {
+    const start = performance.now();
+    const update = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(ease * target);
+      if (progress < 1) requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+  }
+
+  const countObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const target = parseInt(entry.target.dataset.count);
+        if (!isNaN(target)) countUp(entry.target, target, 1200);
+        countObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('[data-count]').forEach(el => {
+    countObserver.observe(el);
+  });
+</script>
+</body>
+</html>

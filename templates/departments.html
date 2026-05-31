@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% block title %}Departments{% endblock %}
+{% block page_title %}Departments{% endblock %}
+
+{% block content %}
+<style>
+@keyframes dp-up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.dp-page { animation: dp-up .35s ease both; }
+
+/* ── Page header ──────────────────────────────── */
+.dp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; gap: 16px; flex-wrap: wrap;
+}
+.dp-header-title { font-size: 18px; font-weight: 700; color: var(--text-1); line-height: 1.2; }
+.dp-header-sub   { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+.dp-header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── KPI cards ────────────────────────────────── */
+.dp-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media(max-width:800px){ .dp-kpis { grid-template-columns: 1fr 1fr; } }
+.dp-kpi-total  { --card-accent: var(--brand);  --card-bg: var(--brand-dim); }
+.dp-kpi-emp    { --card-accent: var(--green);  --card-bg: var(--green-bg); }
+.dp-kpi-avg    { --card-accent: var(--amber);  --card-bg: var(--amber-bg); }
+.dp-kpi-mgr    { --card-accent: var(--purple); --card-bg: var(--purple-bg); }
+
+/* ── Dept grid ─────────────────────────────────── */
+.dp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow var(--anim), transform var(--anim), border-color var(--anim);
+  position: relative;
+}
+.dp-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.dp-card-accent {
+  height: 4px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.dp-card-body { padding: 18px 20px 14px; }
+
+.dp-card-top {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 10px; margin-bottom: 14px;
+}
+.dp-icon-wrap {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.dp-card-name {
+  font-size: 15px; font-weight: 700; color: var(--text-1); line-height: 1.2;
+  flex: 1;
+}
+.dp-card-id {
+  font-family: var(--mono); font-size: 10.5px;
+  color: var(--text-3); background: var(--bg);
+  padding: 2px 7px; border-radius: 5px; flex-shrink: 0;
+}
+
+/* Manager row */
+.dp-mgr-row {
+  display: flex; align-items: center; gap: 7px;
+  margin-bottom: 14px;
+}
+.dp-mgr-av {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: var(--brand); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.dp-mgr-name { font-size: 12.5px; font-weight: 500; color: var(--text-2); }
+.dp-mgr-role { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+/* Stat pills row */
+.dp-stats-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+.dp-stat-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11.5px; font-weight: 600; color: var(--text-2);
+}
+.dp-stat-pill-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* Action buttons */
+.dp-actions {
+  display: flex; gap: 4px; align-items: center; flex-shrink: 0;
+}
+.dp-action-btn {
+  width: 30px; height: 30px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-3); cursor: pointer; text-decoration: none;
+  font-size: 13px; transition: all var(--anim);
+}
+.dp-action-btn:hover { background: var(--bg); border-color: var(--text-3); color: var(--text-1); transform: translateY(-1px); }
+.dp-action-btn-edit:hover   { background: var(--blue-bg); border-color: #bfdbfe; color: var(--blue); }
+.dp-action-btn-danger:hover { background: var(--red-bg);  border-color: #fecaca; color: var(--red);  }
+
+/* Empty state */
+.dp-empty {
+  grid-column: 1/-1;
+  padding: 64px 24px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.dp-empty-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: var(--bg); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin-bottom: 4px;
+}
+.dp-empty-title { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.dp-empty-sub   { font-size: 13px; color: var(--text-3); max-width: 260px; line-height: 1.5; }
+
+/* ── Modal banner ─────────────────────────────── */
+.dp-modal-banner {
+  background: linear-gradient(135deg, var(--brand) 0%, #f07a64 100%);
+  padding: 18px 22px 16px; position: relative;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.dp-modal-banner-title { font-size: 15px; font-weight: 700; color: #fff; }
+.dp-modal-banner-sub   { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 2px; }
+.dp-modal-close-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: none;
+  background: rgba(255,255,255,.18); color: #fff; cursor: pointer;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+  transition: background var(--anim);
+  position: absolute; right: 16px; top: 16px;
+}
+.dp-modal-close-btn:hover { background: rgba(255,255,255,.3); }
+.dp-section-label {
+  font-size: 10.5px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .09em;
+  margin: 18px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.dp-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-light); }
+
+/* Department accent colors */
+.dp-acc-0 { background: #e85d42; }
+.dp-acc-1 { background: #7c3aed; }
+.dp-acc-2 { background: #059669; }
+.dp-acc-3 { background: #2563eb; }
+.dp-acc-4 { background: #b45309; }
+.dp-acc-5 { background: #0891b2; }
+.dp-ic-0  { background: #fff0ee; }
+.dp-ic-1  { background: #f5f3ff; }
+.dp-ic-2  { background: #e8f5ef; }
+.dp-ic-3  { background: #eff6ff; }
+.dp-ic-4  { background: var(--amber-bg); }
+.dp-ic-5  { background: #ecfeff; }
+</style>
+
+<div class="dp-page">
+
+  <!-- ── Page Header ── -->
+  <div class="dp-header">
+    <div>
+      <div class="dp-header-title">Department Directory</div>
+      <div class="dp-header-sub">Manage departments, managers, and team structure</div>
+    </div>
+    <div class="dp-header-actions">
+      <button class="btn btn-primary" onclick="toggleModal('addDeptModal')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Department
+      </button>
+    </div>
+  </div>
+
+  <!-- ── KPI Cards ── -->
+  <div class="dp-kpis">
+    <div class="stat-card dp-kpi-total">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      </div>
+      <div class="stat-value">{{ departments|length }}</div>
+      <div class="stat-label">Total Departments</div>
+    </div>
+    <div class="stat-card dp-kpi-emp">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-value">{{ departments|sum(attribute='emp_count') }}</div>
+      <div class="stat-label">Total Employees</div>
+    </div>
+    <div class="stat-card dp-kpi-avg">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="stat-value" style="font-size:20px;">
+        {% if departments|length > 0 %}
+          {{ (departments|sum(attribute='emp_count') / departments|length)|round(0,'floor')|int }}
+        {% else %}0{% endif %}
+      </div>
+      <div class="stat-label">Avg Team Size</div>
+    </div>
+    <div class="stat-card dp-kpi-mgr">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="stat-value">{{ departments|selectattr('manager')|list|length }}</div>
+      <div class="stat-label">With Managers</div>
+    </div>
+  </div>
+
+  <!-- ── Department Cards Grid ── -->
+  <div class="dp-grid" id="deptGrid">
+    {% for d in departments %}
+    {% set ci = loop.index0 % 6 %}
+    {% set icons = ['🔧','👥','💰','📣','🏢','📊'] %}
+    {% set dept_icon = icons[ci] %}
+    <div class="dp-card">
+      <div class="dp-card-accent dp-acc-{{ ci }}"></div>
+      <div class="dp-card-body">
+
+        <!-- Top row: icon + name + id + actions -->
+        <div class="dp-card-top">
+          <div class="dp-icon-wrap dp-ic-{{ ci }}">{{ dept_icon }}</div>
+          <div style="flex:1;">
+            <div class="dp-card-name">{{ d.dept_name }}</div>
+          </div>
+          <span class="dp-card-id">#{{ d.department_id }}</span>
+          <div class="dp-actions">
+            <button class="dp-action-btn dp-action-btn-edit"
+              title="Edit Department"
+              onclick="openEditDept({{ d.department_id }},'{{ d.dept_name }}','{{ d.manager or '' }}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <a href="{{ url_for('delete_department', did=d.department_id) }}"
+               onclick="return confirm('Delete {{ d.dept_name }}? This only works if no active employees.')"
+               class="dp-action-btn dp-action-btn-danger" title="Delete">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Manager row -->
+        <div class="dp-mgr-row">
+          {% if d.manager %}
+          <div class="dp-mgr-av dp-acc-{{ ci }}">{{ d.manager[0] }}</div>
+          <div>
+            <div class="dp-mgr-name">{{ d.manager }}</div>
+            <div class="dp-mgr-role">Department Manager</div>
+          </div>
+          {% else %}
+          <div class="dp-mgr-av" style="background:var(--grey-bg);color:var(--text-3);">—</div>
+          <div>
+            <div class="dp-mgr-name" style="color:var(--text-3);">No manager assigned</div>
+            <div class="dp-mgr-role">Click edit to assign one</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Stats row -->
+        <div class="dp-stats-row">
+          <div class="dp-stat-pill">
+            <span class="dp-stat-pill-dot dp-acc-{{ ci }}"></span>
+            {{ d.emp_count }} Employee{% if d.emp_count != 1 %}s{% endif %}
+          </div>
+          <div class="dp-stat-pill" style="background:var(--brand-dim);border-color:var(--brand);color:var(--brand);">
+            Active
+          </div>
+        </div>
+
+      </div>
+    </div>
+    {% else %}
+    <div class="dp-empty">
+      <div class="dp-empty-icon">🏢</div>
+      <div class="dp-empty-title">No departments yet</div>
+      <div class="dp-empty-sub">Create your first department to start organising your team</div>
+      <button class="btn btn-primary" onclick="toggleModal('addDeptModal')" style="margin-top:4px;">+ Add Department</button>
+    </div>
+    {% endfor %}
+  </div>
+
+</div><!-- /dp-page -->
+
+
+<!-- ── Add Department Modal ── -->
+<div class="modal-overlay" id="addDeptModal">
+  <div class="modal" style="max-width:480px;position:relative;">
+    <div class="dp-modal-banner">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">🏢</div>
+        <div>
+          <div class="dp-modal-banner-title">Add New Department</div>
+          <div class="dp-modal-banner-sub">Create a new team structure in the organisation</div>
+        </div>
+      </div>
+      <button class="dp-modal-close-btn" onclick="toggleModal('addDeptModal')">✕</button>
+    </div>
+
+    <form method="POST" action="{{ url_for('add_department') }}" style="padding:0 22px 20px;">
+      <div class="dp-section-label">Department Details</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Department Name <span style="color:var(--red)">*</span></label>
+        <input type="text" name="dept_name" class="form-input" required
+               placeholder="e.g. Marketing, Engineering…" autofocus>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Manager Name</label>
+        <input type="text" name="manager" class="form-input"
+               placeholder="e.g. Ravi Kumar">
+        <div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">Optional — can be assigned later</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="toggleModal('addDeptModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Department
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ── Edit Department Modal ── -->
+<div class="modal-overlay" id="editDeptModal">
+  <div class="modal" style="max-width:480px;position:relative;">
+    <div class="dp-modal-banner" style="background:linear-gradient(135deg,var(--blue) 0%,#4f8ef7 100%);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">✏️</div>
+        <div>
+          <div class="dp-modal-banner-title">Edit Department</div>
+          <div class="dp-modal-banner-sub">Update department name or manager</div>
+        </div>
+      </div>
+      <button class="dp-modal-close-btn" onclick="toggleModal('editDeptModal')">✕</button>
+    </div>
+
+    <form id="editDeptForm" method="POST" style="padding:0 22px 20px;">
+      <div class="dp-section-label">Department Details</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Department Name <span style="color:var(--red)">*</span></label>
+        <input type="text" id="edit_dept_name" name="dept_name" class="form-input" required>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Manager Name</label>
+        <input type="text" id="edit_dept_manager" name="manager" class="form-input">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="toggleModal('editDeptModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Update Department
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if open_modal %}
+window.addEventListener('load', function() { toggleModal('addDeptModal'); });
+{% endif %}
+
+function openEditDept(id, name, manager) {
+  document.getElementById('editDeptForm').action = '/departments/edit/' + id;
+  document.getElementById('edit_dept_name').value    = name;
+  document.getElementById('edit_dept_manager').value = manager;
+  toggleModal('editDeptModal');
+}
+</script>
+{% endblock %}

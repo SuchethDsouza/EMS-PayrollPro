@@ -1,0 +1,900 @@
+{% extends "base.html" %}
+{% block title %}Employees{% endblock %}
+{% block page_title %}Employee Management{% endblock %}
+
+{% block content %}
+<style>
+/* ═══════════════════════════════════════════════
+   SCOPED PAGE STYLES — all inside block content
+   Uses only CSS vars already defined in base.html
+═══════════════════════════════════════════════ */
+@keyframes em-up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.em-page { animation: em-up .35s ease both; }
+
+/* ── Page header ──────────────────────────────── */
+.em-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.em-header-left {}
+.em-header-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.2;
+}
+.em-header-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+.em-header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── KPI cards ────────────────────────────────── */
+.em-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+/* Reuse base .stat-card; set accent per card */
+.em-kpi-total  { --card-accent: var(--brand);  --card-bg: var(--brand-dim); }
+.em-kpi-active { --card-accent: var(--green);  --card-bg: var(--green-bg); }
+.em-kpi-depts  { --card-accent: var(--purple); --card-bg: var(--purple-bg); }
+.em-kpi-salary { --card-accent: var(--amber);  --card-bg: var(--amber-bg); }
+.em-kpi-val-sm { font-size: 20px !important; letter-spacing: -.3px; }
+
+/* ── Toolbar ──────────────────────────────────── */
+.em-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.em-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+}
+.em-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3);
+  font-size: 13px;
+  pointer-events: none;
+}
+.em-search {
+  width: 100%;
+  padding: 7px 10px 7px 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text-1);
+  background: var(--bg);
+  outline: none;
+  transition: border-color var(--anim), box-shadow var(--anim);
+}
+.em-search:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); }
+.em-filter-sel {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text-1);
+  background: var(--bg);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--anim), box-shadow var(--anim);
+  min-width: 140px;
+}
+.em-filter-sel:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); }
+.em-toolbar-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+.em-count-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  background: var(--bg);
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  margin-left: auto;
+}
+.em-count-chip span { color: var(--text-1); }
+
+/* ── Table card ───────────────────────────────── */
+.em-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.em-table-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border-light);
+}
+.em-table-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.em-table-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+.em-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.em-tbl thead th {
+  text-align: left;
+  padding: 9px 16px;
+  color: var(--text-3);
+  font-weight: 600;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-bottom: 1px solid var(--border-light);
+  background: #fafbfc;
+  white-space: nowrap;
+  user-select: none;
+}
+.em-tbl thead th.sortable { cursor: pointer; }
+.em-tbl thead th.sortable:hover { color: var(--text-1); }
+.em-tbl tbody tr {
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--anim);
+}
+.em-tbl tbody tr:last-child { border-bottom: none; }
+.em-tbl tbody tr:hover { background: var(--brand-dim); }
+.em-tbl td { padding: 11px 16px; color: var(--text-2); vertical-align: middle; }
+
+/* Employee name cell */
+.em-name-cell { display: flex; align-items: center; gap: 10px; }
+.em-avatar {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  flex-shrink: 0;
+  color: #fff;
+}
+.em-name-text strong { display: block; font-size: 13px; font-weight: 600; color: var(--text-1); }
+.em-name-text span   { display: block; font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+/* ID chip */
+.em-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  background: var(--bg);
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+/* Dept pill */
+.em-dept {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Experience */
+.em-exp { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.em-exp strong { color: var(--text-2); font-weight: 600; }
+
+/* Salary */
+.em-salary-main { font-size: 13px; font-weight: 600; color: var(--text-1); font-family: var(--mono); }
+.em-salary-sub  { font-size: 10.5px; color: var(--text-3); margin-top: 1px; }
+
+/* Status badge with dot */
+.em-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.em-status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.em-status-active   { background: var(--green-bg);  color: var(--green); }
+.em-status-inactive { background: var(--grey-bg);   color: var(--grey);  }
+
+/* Action group */
+.em-actions { display: flex; align-items: center; gap: 4px; }
+.em-action-btn {
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 13px;
+  transition: background var(--anim), border-color var(--anim), color var(--anim), transform .1s;
+}
+.em-action-btn:hover { background: var(--bg); border-color: var(--text-3); color: var(--text-1); transform: translateY(-1px); }
+.em-action-btn-danger:hover { background: var(--red-bg); border-color: #fecaca; color: var(--red); }
+.em-action-btn-edit:hover   { background: var(--blue-bg); border-color: #bfdbfe; color: var(--blue); }
+.em-action-btn-perf:hover   { background: var(--purple-bg); border-color: #ddd6fe; color: var(--purple); }
+
+/* Empty state */
+.em-empty {
+  padding: 56px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.em-empty-icon {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.em-empty-title { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.em-empty-sub   { font-size: 13px; color: var(--text-3); max-width: 280px; line-height: 1.5; }
+
+/* ── Modal upgrades ───────────────────────────── */
+.em-modal-banner {
+  background: linear-gradient(135deg, var(--brand) 0%, #f07a64 100%);
+  padding: 18px 22px 16px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.em-modal-banner-title { font-size: 15px; font-weight: 700; color: #fff; }
+.em-modal-banner-sub   { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 2px; }
+.em-modal-close-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--anim);
+  position: absolute;
+  right: 16px; top: 16px;
+}
+.em-modal-close-btn:hover { background: rgba(255,255,255,.3); }
+.em-modal { position: relative; }
+.em-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  margin: 18px 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.em-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+/* Validation */
+.v-msg        { font-size: 11.5px; margin-top: 4px; min-height: 14px; font-weight: 500; }
+.v-msg.error  { color: var(--red); }
+.v-msg.ok     { color: var(--green); }
+.v-input.input-error { border-color: var(--red) !important; background: #fff8f8; }
+.v-input.input-ok    { border-color: var(--green) !important; background: #f6fffc; }
+.em-form-summary {
+  display: none;
+  background: var(--red-bg);
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 12.5px;
+  color: var(--red);
+  margin-top: 8px;
+}
+
+/* Avatar color palette for names */
+.av-0 { background: #e85d42; }
+.av-1 { background: #7c3aed; }
+.av-2 { background: #059669; }
+.av-3 { background: #2563eb; }
+.av-4 { background: #b45309; }
+.av-5 { background: #dc2626; }
+.av-6 { background: #0891b2; }
+.av-7 { background: #4f46e5; }
+.av-8 { background: #65a30d; }
+.av-9 { background: #c026d3; }
+
+/* Dept color map */
+.dept-Engineering  { background: #ede9fe; color: #7c3aed; }
+.dept-HR,.dept-Human.Resources { background: var(--green-bg); color: var(--green); }
+.dept-Finance      { background: var(--amber-bg); color: var(--amber); }
+.dept-Marketing    { background: var(--blue-bg); color: var(--blue); }
+.dept-default      { background: var(--grey-bg); color: var(--grey); }
+</style>
+
+<div class="em-page">
+
+  <!-- ── Page Header ── -->
+  <div class="em-header">
+    <div class="em-header-left">
+      <div class="em-header-title">Workforce Directory</div>
+      <div class="em-header-sub">Manage employee records, roles, and compensation</div>
+    </div>
+    <div class="em-header-actions">
+      <button class="btn btn-outline" onclick="exportTable()" title="Export CSV">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Employee
+      </button>
+    </div>
+  </div>
+
+  <!-- ── KPI Cards ── -->
+  <div class="em-kpis">
+    <div class="stat-card em-kpi-total">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-value" id="kpiTotal">{{ employees|length }}</div>
+      <div class="stat-label">Total Employees</div>
+    </div>
+    <div class="stat-card em-kpi-active">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="stat-value" id="kpiActive">{{ employees|selectattr('status','equalto','Active')|list|length }}</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card em-kpi-depts">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      </div>
+      <div class="stat-value">{{ departments|length }}</div>
+      <div class="stat-label">Departments</div>
+    </div>
+    <div class="stat-card em-kpi-salary">
+      <div class="stat-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </div>
+      <div class="stat-value em-kpi-val-sm">
+        {% if employees %}₹{{ "{:,.0f}".format((employees|sum(attribute='base_salary')) / employees|length) }}{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Avg. Salary</div>
+    </div>
+  </div>
+
+  <!-- ── Toolbar ── -->
+  <div class="em-toolbar">
+    <div class="em-search-wrap">
+      <span class="em-search-icon">🔍</span>
+      <input type="text" id="empSearch" class="em-search" placeholder="Search by employee name" oninput="filterEmployees()">
+    </div>
+    <select class="em-filter-sel" id="deptFilter" onchange="filterEmployees()">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d.dept_name }}">{{ d.dept_name }}</option>
+      {% endfor %}
+    </select>
+    <select class="em-filter-sel" id="statusFilter" onchange="filterEmployees()" style="min-width:120px;">
+      <option value="">All Status</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+    <div class="em-toolbar-sep"></div>
+    <button class="btn btn-outline btn-xs" onclick="resetFilters()">Reset</button>
+    <div class="em-count-chip">Showing <span id="visibleCount">{{ employees|length }}</span> of {{ employees|length }}</div>
+  </div>
+
+  <!-- ── Table ── -->
+  <div class="em-table-card">
+    <div class="em-table-hd">
+      <div class="em-table-title">
+        <span class="em-table-dot"></span>
+        Employee Records
+      </div>
+      <span style="font-size:12px;color:var(--text-3);">Click a row to select</span>
+    </div>
+
+    {% if employees %}
+    <table class="em-tbl" id="empTable">
+      <thead>
+        <tr>
+          <th style="width:44px;">#</th>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Gender</th>
+          <th>Experience</th>
+          <th>Base Salary</th>
+          <th>Status</th>
+          <th style="width:110px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="empTbody">
+        {% for e in employees %}
+        {% set av_colors = ['#e85d42','#7c3aed','#059669','#2563eb','#b45309','#dc2626','#0891b2','#4f46e5','#65a30d','#c026d3'] %}
+        {% set av_color = av_colors[loop.index0 % 10] %}
+        {% set dept_cls = e.dept_name.replace(' ','') %}
+        <tr data-name="{{ e.name|lower }}" data-email="{{ (e.email or '')|lower }}"
+            data-pos="{{ (e.position or '')|lower }}" data-dept="{{ e.dept_name }}"
+            data-status="{{ e.status }}">
+          <td><span class="em-id">#{{ e.employee_id }}</span></td>
+          <td>
+            <div class="em-name-cell">
+              <div class="em-avatar" style="background:{{ av_color }};">{{ e.name[0] }}</div>
+              <div class="em-name-text">
+                <strong>{{ e.name }}</strong>
+                <span>{{ e.position or '—' }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="em-dept dept-{{ dept_cls }}">{{ e.dept_name }}</span>
+          </td>
+          <td>
+            {% if e.gender %}
+            <span class="badge badge-{{ 'blue' if e.gender == 'Male' else 'purple' }}">{{ e.gender }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <div class="em-exp">
+              {% if e.join_date %}
+                {% set jy = e.join_date[:4]|int %}
+                {% set exp = now.year - jy %}
+                <strong>{{ exp }}</strong> yr{% if exp != 1 %}s{% endif %}
+              {% else %}—{% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="em-salary-main">₹{{ "{:,.0f}".format(e.base_salary) }}</div>
+            <div class="em-salary-sub">per month</div>
+          </td>
+          <td>
+            <span class="em-status {{ 'em-status-active' if e.status=='Active' else 'em-status-inactive' }}">
+              <span class="em-status-dot"></span>
+              {{ e.status }}
+            </span>
+          </td>
+          <td>
+            <div class="em-actions">
+              <!-- Edit -->
+              <button class="em-action-btn em-action-btn-edit"
+                title="Edit Employee"
+               onclick="openEditModal({{ e.employee_id }},'{{ e.name }}','{{ e.email or '' }}','{{ e.phone or '' }}','{{ e.position or '' }}',{{ e.department_id }},{{ e.base_salary }},'{{ e.status }}','{{ e.gender or '' }}',{{ e.experience_years or 0 }})">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <!-- Performance -->
+              <a href="{{ url_for('employee_performance', eid=e.employee_id) }}"
+                class="em-action-btn em-action-btn-perf" title="View Performance">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </a>
+              <!-- Deactivate -->
+              {% if e.status == 'Active' %}
+              <a href="{{ url_for('delete_employee', eid=e.employee_id) }}"
+                onclick="return confirm('Deactivate {{ e.name }}? This will mark them as inactive.')"
+                class="em-action-btn em-action-btn-danger" title="Deactivate">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Empty state when filters hide everything -->
+    <div id="emptyFiltered" style="display:none;">
+      <div class="em-empty">
+        <div class="em-empty-icon">🔍</div>
+        <div class="em-empty-title">No employees match your filters</div>
+        <div class="em-empty-sub">Try adjusting the search or filter criteria</div>
+        <button class="btn btn-outline" onclick="resetFilters()" style="margin-top:4px;">Clear Filters</button>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Full empty state -->
+    <div class="em-empty">
+      <div class="em-empty-icon">👥</div>
+      <div class="em-empty-title">No employees yet</div>
+      <div class="em-empty-sub">Get started by adding your first employee to the workforce directory</div>
+      <button class="btn btn-primary" onclick="openAddModal()" style="margin-top:4px;">
+        + Add First Employee
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+</div><!-- /em-page -->
+
+
+<!-- ══════════════════════════════════════════════════
+     ADD EMPLOYEE MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="addEmpModal">
+  <div class="modal em-modal" style="max-width:580px;">
+
+    <!-- Coloured banner header -->
+    <div class="em-modal-banner" style="position:relative;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
+        <div>
+          <div class="em-modal-banner-title">Add New Employee</div>
+          <div class="em-modal-banner-sub">Fill in the details to onboard a new team member</div>
+        </div>
+      </div>
+      <button class="em-modal-close-btn" onclick="closeAddModal()">✕</button>
+    </div>
+
+    <form id="addEmpForm" method="POST" action="{{ url_for('add_employee') }}" novalidate style="padding:0 22px 20px;">
+
+      <!-- Personal Information -->
+      <div class="em-section-label">Personal Information</div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Full Name <span style="color:var(--red)">*</span></label>
+          <input type="text" id="f_name" name="name" class="form-input v-input"
+                 placeholder="e.g. Rahul Sharma"
+                 oninput="validate_name(this)" onblur="validate_name(this)">
+          <div class="v-msg" id="msg_name"></div>
+        </div>
+        <div class="form-group">
+          <label>Email Address <span style="color:var(--red)">*</span></label>
+          <input type="email" id="f_email" name="email" class="form-input v-input"
+                 placeholder="e.g. rahul@company.com"
+                 oninput="validate_email(this)" onblur="validate_email(this)">
+          <div class="v-msg" id="msg_email"></div>
+        </div>
+        <div class="form-group">
+          <label>Phone Number <span style="color:var(--red)">*</span></label>
+          <div style="position:relative;">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text-3);font-weight:600;z-index:1;">+91</span>
+            <input type="tel" id="f_phone" name="phone" class="form-input v-input"
+                   placeholder="9876543210" maxlength="10" style="padding-left:40px;"
+                   oninput="validate_phone(this)" onblur="validate_phone(this)">
+          </div>
+          <div class="v-msg" id="msg_phone"></div>
+        </div>
+        <div class="form-group">
+          <label>Join Date <span style="color:var(--red)">*</span></label>
+          <input type="date" id="f_join" name="join_date" class="form-input v-input"
+                 onchange="validate_date(this)" onblur="validate_date(this)">
+          <div class="v-msg" id="msg_join"></div>
+        </div>
+        <div class="form-group">
+          <label>Gender <span style="color:var(--red)">*</span></label>
+          <select id="f_gender" name="gender" class="form-input v-input"
+                  onchange="validate_gender(this)">
+            <option value="">— Select Gender —</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+          <div class="v-msg" id="msg_gender"></div>
+        </div>
+      </div>
+
+      <!-- Job Information -->
+      <div class="em-section-label">Job Information</div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Position / Role <span style="color:var(--red)">*</span></label>
+          <input type="text" id="f_position" name="position" class="form-input v-input"
+                 placeholder="e.g. Software Developer"
+                 oninput="validate_position(this)" onblur="validate_position(this)">
+          <div class="v-msg" id="msg_position"></div>
+        </div>
+        <div class="form-group">
+          <label>Department <span style="color:var(--red)">*</span></label>
+          <select id="f_dept" name="department_id" class="form-input v-input"
+                  onchange="validate_dept(this)">
+            <option value="">— Select Department —</option>
+            {% for d in departments %}
+            <option value="{{ d.department_id }}">{{ d.dept_name }}</option>
+            {% endfor %}
+          </select>
+          <div class="v-msg" id="msg_dept"></div>
+        </div>
+      </div>
+
+      <!-- Experience -->
+      <div class="em-section-label">Experience</div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Years of Experience</label>
+          <input type="number" id="f_exp" name="experience_years" class="form-input v-input"
+                 placeholder="0 for Fresher" min="0" max="35"
+                 oninput="validate_exp(this)" onblur="validate_exp(this)">
+          <div class="v-msg" id="msg_exp"></div>
+        </div>
+      </div>
+
+      <!-- Salary Information -->
+      <div class="em-section-label">Compensation</div>
+      <div class="form-grid" style="grid-template-columns:1fr;gap:14px;">
+        <div class="form-group">
+          <label>Monthly Base Salary (₹) <span style="color:var(--red)">*</span></label>
+          <input type="number" id="f_salary" name="base_salary" class="form-input v-input"
+                 placeholder="e.g. 45,000" min="1000" max="500000"
+                 oninput="validate_salary(this)" onblur="validate_salary(this)">
+          <div class="v-msg" id="msg_salary"></div>
+        </div>
+      </div>
+
+      <!-- Error summary -->
+      <div class="em-form-summary" id="form_summary"></div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeAddModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitAddForm()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Employee
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     EDIT EMPLOYEE MODAL
+══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="editEmpModal">
+  <div class="modal em-modal" style="max-width:580px;">
+
+    <div class="em-modal-banner" style="position:relative;background:linear-gradient(135deg,var(--blue) 0%,#4f8ef7 100%);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">✏️</div>
+        <div>
+          <div class="em-modal-banner-title">Edit Employee</div>
+          <div class="em-modal-banner-sub">Update employee information and status</div>
+        </div>
+      </div>
+      <button class="em-modal-close-btn" onclick="toggleModal('editEmpModal')">✕</button>
+    </div>
+
+    <form id="editEmpForm" method="POST" style="padding:0 22px 20px;">
+
+      <div class="em-section-label">Personal Information</div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="e_name" name="name" class="form-input" required placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="e_email" name="email" class="form-input" placeholder="email@company.com">
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" id="e_phone" name="phone" class="form-input" maxlength="10" placeholder="9876543210">
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select id="e_gender" name="gender" class="form-input">
+            <option value="">— Select —</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="e_status" name="status" class="form-input">
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Years of Experience</label>
+          <input type="number" id="e_exp" name="experience_years" class="form-input"
+                 placeholder="0 for Fresher" min="0" max="35">
+        </div>
+      </div>
+
+      <div class="em-section-label">Job Information</div>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Position / Role</label>
+          <input type="text" id="e_position" name="position" class="form-input" placeholder="e.g. Software Developer">
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <select id="e_dept" name="department_id" class="form-input">
+            {% for d in departments %}
+            <option value="{{ d.department_id }}">{{ d.dept_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="em-section-label">Compensation</div>
+      <div class="form-grid" style="grid-template-columns:1fr;gap:14px;">
+        <div class="form-group">
+          <label>Monthly Base Salary (₹)</label>
+          <input type="number" id="e_salary" name="base_salary" class="form-input" min="1000" max="500000" placeholder="e.g. 45000">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="toggleModal('editEmpModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Update Employee
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── Validation helpers (unchanged logic) ───────────────── */
+function setV(input, msgId, ok, msg) {
+  const m = document.getElementById(msgId);
+  input.classList.toggle('input-error', !ok);
+  input.classList.toggle('input-ok', ok);
+  m.textContent = ok ? '✓ ' + msg : '✕ ' + msg;
+  m.className = 'v-msg ' + (ok ? 'ok' : 'error');
+  return ok;
+}
+function validate_gender(el)   { return !el.value ? setV(el,'msg_gender',false,'Please select gender') : setV(el,'msg_gender',true,''); }
+function validate_name(el)     { const v=el.value.trim(); return !v?setV(el,'msg_name',false,'Name required'):!/^[A-Za-z\s]+$/.test(v)?setV(el,'msg_name',false,'Letters only'):v.length<3?setV(el,'msg_name',false,'Min 3 characters'):setV(el,'msg_name',true,'Looks good'); }
+function validate_email(el)    { const v=el.value.trim(); return !v?setV(el,'msg_email',false,'Email required'):/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)?setV(el,'msg_email',true,'Valid email'):setV(el,'msg_email',false,'Invalid email format'); }
+function validate_phone(el)    { el.value=el.value.replace(/\D/g,''); const v=el.value; return !v?setV(el,'msg_phone',false,'Phone required'):v.length!==10?setV(el,'msg_phone',false,'Exactly 10 digits ('+v.length+' entered)'):/^[6-9]/.test(v)?setV(el,'msg_phone',true,'Valid'):setV(el,'msg_phone',false,'Must start with 6–9'); }
+function validate_position(el) { const v=el.value.trim(); return !v?setV(el,'msg_position',false,'Position required'):v.length<2?setV(el,'msg_position',false,'Min 2 characters'):setV(el,'msg_position',true,'OK'); }
+function validate_dept(el)     { return !el.value?setV(el,'msg_dept',false,'Select a department'):setV(el,'msg_dept',true,'Selected'); }
+function validate_salary(el)   { const v=parseFloat(el.value); return !el.value?setV(el,'msg_salary',false,'Salary required'):v<1000?setV(el,'msg_salary',false,'Min ₹1,000'):v>500000?setV(el,'msg_salary',false,'Max ₹5,00,000'):setV(el,'msg_salary',true,'₹'+v.toLocaleString('en-IN')+' / month'); }
+  function validate_exp(el) { const v=parseInt(el.value); return !isNaN(v)&&v<0?setV(el,'msg_exp',false,'Cannot be negative'):!isNaN(v)&&v>35?setV(el,'msg_exp',false,'Maximum 35 years'):(el.value===''||v===0||isNaN(v))?setV(el,'msg_exp',true,'✓ Fresher'):setV(el,'msg_exp',true,'✓ '+v+' year'+(v===1?'':'s')); }
+function validate_date(el)     { const v=el.value; if(!v) return setV(el,'msg_join',false,'Date required'); const d=new Date(v+'T00:00:00'),t=new Date(); t.setHours(23,59,59,0); return d>t?setV(el,'msg_join',false,'Cannot be a future date'):setV(el,'msg_join',true,'Valid date'); }
+
+function submitAddForm() {
+  const ok = [
+    validate_name(document.getElementById('f_name')),
+    validate_email(document.getElementById('f_email')),
+    validate_phone(document.getElementById('f_phone')),
+    validate_date(document.getElementById('f_join')),
+    validate_gender(document.getElementById('f_gender')),
+    validate_position(document.getElementById('f_position')),
+    validate_dept(document.getElementById('f_dept')),
+    validate_salary(document.getElementById('f_salary')),
+    validate_exp(document.getElementById('f_exp'))
+  ].every(Boolean);
+  const s = document.getElementById('form_summary');
+  if (!ok) {
+    const errs = [...document.querySelectorAll('#addEmpForm .v-msg.error')].map(m=>m.textContent).filter(Boolean);
+    s.style.display = 'block';
+    s.innerHTML = '<strong>Please fix the following:</strong><ul style="margin:6px 0 0 16px;">' + errs.map(e=>'<li>'+e+'</li>').join('') + '</ul>';
+    document.querySelector('#addEmpForm .input-error')?.scrollIntoView({behavior:'smooth',block:'center'});
+  } else {
+    s.style.display = 'none';
+    document.getElementById('addEmpForm').submit();
+  }
+}
+
+function openAddModal() {
+  document.getElementById('addEmpModal').classList.add('open');
+  const joinField = document.getElementById('f_join');
+  joinField.value = new Date().toISOString().split('T')[0];
+  validate_date(joinField);
+}
+function closeAddModal() {
+  document.getElementById('addEmpModal').classList.remove('open');
+  document.getElementById('addEmpForm').reset();
+  document.querySelectorAll('#addEmpForm .v-input').forEach(i => i.classList.remove('input-error','input-ok'));
+  document.querySelectorAll('#addEmpForm .v-msg').forEach(m => { m.textContent=''; m.className='v-msg'; });
+  document.getElementById('form_summary').style.display = 'none';
+}
+
+function openEditModal(id,name,email,phone,position,deptId,salary,status,gender,exp) {
+  document.getElementById('editEmpForm').action = '/employees/edit/' + id;
+  document.getElementById('e_name').value     = name;
+  document.getElementById('e_email').value    = email;
+  document.getElementById('e_phone').value    = phone;
+  document.getElementById('e_position').value = position;
+  document.getElementById('e_dept').value     = deptId;
+  document.getElementById('e_salary').value   = salary;
+  document.getElementById('e_status').value   = status;
+  document.getElementById('e_gender').value   = gender || '';
+  document.getElementById('e_exp').value      = exp || 0;
+  toggleModal('editEmpModal');
+}
+
+/* ── Live filter with dept + status + search ───────────── */
+function filterEmployees() {
+  const q      = document.getElementById('empSearch').value.toLowerCase();
+  const dept   = document.getElementById('deptFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const rows   = document.querySelectorAll('#empTbody tr');
+  let visible  = 0;
+
+  rows.forEach(row => {
+    const name   = (row.dataset.name || '');
+    const email  = (row.dataset.email || '');
+    const pos    = (row.dataset.pos || '');
+    const rDept  = (row.dataset.dept || '');
+    const rStat  = (row.dataset.status || '');
+
+    const matchQ    = !q    || name.includes(q) || email.includes(q) || pos.includes(q);
+    const matchDept = !dept || rDept === dept;
+    const matchStat = !status || rStat === status;
+
+    const show = matchQ && matchDept && matchStat;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  document.getElementById('visibleCount').textContent = visible;
+  const ef = document.getElementById('emptyFiltered');
+  if (ef) ef.style.display = visible === 0 ? 'block' : 'none';
+}
+
+function resetFilters() {
+  document.getElementById('empSearch').value = '';
+  document.getElementById('deptFilter').value = '';
+  document.getElementById('statusFilter').value = '';
+  filterEmployees();
+}
+
+/* ── Export CSV ─────────────────────────────────────────── */
+function exportTable() {
+  const rows = [...document.querySelectorAll('#empTbody tr')].filter(r => r.style.display !== 'none');
+  const header = 'ID,Name,Position,Department,Status,Salary\n';
+  const csvRows = rows.map(r => {
+    const cells = r.querySelectorAll('td');
+    const id   = cells[0]?.textContent.trim();
+    const name = cells[1]?.querySelector('strong')?.textContent.trim();
+    const pos  = cells[1]?.querySelector('span')?.textContent.trim();
+    const dept = cells[2]?.textContent.trim();
+    const stat = cells[5]?.textContent.trim();
+    const sal  = cells[4]?.querySelector('.em-salary-main')?.textContent.trim();
+    return [id,name,pos,dept,stat,sal].join(',');
+  });
+  const blob = new Blob([header + csvRows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'employees.csv';
+  a.click();
+}
+
+/* ── Phone key restriction ─────────────────────────────── */
+document.getElementById('f_phone')?.addEventListener('keypress', e => {
+  if (!/[0-9]/.test(e.key) && !['Backspace','Delete','Tab','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+});
+
+/* ── Auto-open modal if flagged ────────────────────────── */
+{% if open_modal %}
+document.addEventListener('DOMContentLoaded', openAddModal);
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+{% block title %}Leaves{% endblock %}
+{% block page_title %}Leave Management{% endblock %}
+
+{% block content %}
+<style>
+/* ── Orange design tokens ──────────────────────────────────────────────── */
+:root {
+  --or:        #F97316;
+  --or-deep:   #EA580C;
+  --or-light:  #FDBA74;
+  --or-surf:   #FFF7ED;
+  --or-glow:   rgba(249,115,22,.12);
+  --or-shadow: rgba(249,115,22,.18);
+
+  --ink:       #111118;
+  --ink2:      #3a3a4a;
+  --ink3:      #6b6b80;
+  --ink4:      #a8a8bb;
+  --surface:   #ffffff;
+  --surface2:  #fafafa;
+  --surface3:  #f4f4f8;
+  --border:    rgba(0,0,0,.08);
+  --border2:   rgba(0,0,0,.05);
+
+  --green:     #0f9e6e;
+  --green-bg:  #e6f7f2;
+  --red:       #dc2828;
+  --red-bg:    #feeeee;
+  --amber:     #c97b0a;
+  --amber-bg:  #fdf3dc;
+  --blue:      #2563eb;
+  --blue-bg:   #eef3ff;
+
+  --radius:    12px;
+  --radius-sm: 8px;
+  --shadow:    0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  --shadow-md: 0 2px 8px rgba(0,0,0,.06), 0 10px 30px rgba(0,0,0,.08);
+}
+
+/* ── My CL balance card ─────────────────────────────────────────────────── */
+.my-cl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 26px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+  position: relative; overflow: hidden;
+}
+.my-cl-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--or), var(--or-light));
+  border-radius: 3px 3px 0 0;
+}
+.my-cl-card h3 {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  margin: 0 0 18px;
+  text-transform: uppercase; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 8px;
+}
+.my-cl-card h3::before { content: '🌿'; font-size: 14px; }
+
+.my-cl-stats-row { display: flex; align-items: center; margin-bottom: 16px; }
+.my-cl-stat { display: flex; flex-direction: column; gap: 3px; padding-right: 28px; }
+.my-cl-stat .val {
+  font-size: 32px; font-weight: 700; color: var(--ink); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.my-cl-stat .lbl {
+  font-size: 10px; color: var(--ink4); text-transform: uppercase;
+  letter-spacing: .07em; font-weight: 600;
+}
+.my-cl-divider { width: 1px; height: 44px; background: var(--border); margin-right: 28px; flex-shrink: 0; }
+
+.my-cl-bar-row { display: flex; align-items: center; gap: 12px; }
+.my-cl-bar-pct { font-size: 11px; color: var(--ink3); white-space: nowrap; font-weight: 600; }
+.my-cl-bar-bg  { flex: 1; background: var(--surface3); border-radius: 6px; height: 8px; overflow: hidden; }
+.my-cl-bar-fill {
+  height: 8px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--green), #34d399);
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+.my-cl-bar-fill.warn   { background: linear-gradient(90deg, var(--amber), #fbbf24); }
+.my-cl-bar-fill.danger { background: linear-gradient(90deg, var(--red), #f87171); }
+
+/* ── Admin info banner (replaces apply form for admin) ─────────────────── */
+.admin-info-banner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.admin-info-banner::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--or), var(--or-light));
+  border-radius: 3px 3px 0 0;
+}
+.admin-info-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--or-surf);
+  border: 1px solid rgba(249,115,22,.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.admin-info-text strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.admin-info-text span {
+  display: block;
+  font-size: 12px;
+  color: var(--ink3);
+  margin-top: 2px;
+}
+
+/* ── Apply leave form card ──────────────────────────────────────────────── */
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+  position: relative; overflow: hidden;
+}
+.form-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--or), var(--or-light));
+  border-radius: 3px 3px 0 0;
+}
+.form-card h3 {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  margin: 0 0 16px;
+  text-transform: uppercase; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 8px;
+}
+.form-card h3::before { content: '📋'; font-size: 14px; }
+
+.form-grid { display: grid; gap: 12px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label {
+  font-size: 10px; font-weight: 700; color: var(--ink3);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.form-input {
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px; color: var(--ink);
+  background: var(--surface2);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+  font-family: inherit;
+}
+.form-input:focus {
+  border-color: var(--or);
+  box-shadow: 0 0 0 3px var(--or-glow);
+  background: var(--surface);
+}
+.form-input::placeholder { color: var(--ink4); }
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--or), var(--or-deep));
+  color: #fff; border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  cursor: pointer; text-decoration: none;
+  box-shadow: 0 2px 8px var(--or-shadow);
+  transition: transform .15s, box-shadow .15s, background .15s;
+  white-space: nowrap;
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--or-deep), #c2410c);
+  box-shadow: 0 4px 16px var(--or-shadow);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: scale(.98); }
+
+.btn-sm {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 5px 11px; font-size: 11px; font-weight: 700;
+  border-radius: 6px; border: none; cursor: pointer;
+  font-family: inherit; text-decoration: none;
+  transition: background .15s, transform .12s;
+  letter-spacing: .02em;
+}
+.btn-sm:hover { transform: translateY(-1px); }
+.btn-sm:active { transform: scale(.97); }
+
+.btn-approve {
+  background: var(--green-bg); color: var(--green);
+  border: 1px solid rgba(15,158,110,.18);
+}
+.btn-approve:hover { background: #c3ead8; }
+
+.btn-reject {
+  background: var(--red-bg); color: var(--red);
+  border: 1px solid rgba(220,40,40,.15);
+}
+.btn-reject:hover { background: #fcdada; }
+
+/* ── Table card ──────────────────────────────────────────────────────────── */
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.table-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--surface2);
+}
+.table-header h3 {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  margin: 0;
+  text-transform: uppercase; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 7px;
+}
+.table-header h3::before { content: '📋'; font-size: 14px; }
+.table-header-count {
+  font-size: 11px; font-weight: 600; color: var(--ink4);
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  padding: 3px 10px; border-radius: 99px;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table thead th {
+  padding: 10px 18px;
+  text-align: left;
+  font-size: 10px; font-weight: 700; color: var(--ink3);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border2);
+  text-transform: uppercase; letter-spacing: .06em;
+  white-space: nowrap;
+}
+.data-table tbody tr { border-bottom: 1px solid var(--border2); transition: background .12s; }
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: var(--or-surf); }
+.data-table td { padding: 11px 18px; vertical-align: middle; }
+.empty-row { text-align: center; padding: 36px !important; color: var(--ink4); font-size: 13px; }
+
+/* Badges */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.badge-green  { background: var(--green-bg);  color: var(--green); }
+.badge-red    { background: var(--red-bg);    color: var(--red);   }
+.badge-orange { background: var(--amber-bg);  color: var(--amber); }
+.badge-blue   { background: var(--blue-bg);   color: var(--blue);  }
+.badge-gray   { background: var(--surface3);  color: var(--ink3);  }
+
+/* ── Employee name + dept cell ───────────────────────────────────────────── */
+.emp-cell-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  display: block;
+}
+.emp-cell-dept {
+  font-size: 11px;
+  color: var(--ink4);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.emp-dept-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--or-light);
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ── CL inline mini widget ───────────────────────────────────────────────── */
+.cl-inline {
+  margin-top: 8px;
+  background: var(--or-surf);
+  border: 1px solid rgba(249,115,22,.2);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  font-size: 12px; color: var(--ink3);
+  display: flex; align-items: center; gap: 10px;
+}
+.cl-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cl-val  { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums; }
+.cl-lbl  { font-size: 9px; color: var(--ink4); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.cl-sep  { width: 1px; height: 30px; background: rgba(249,115,22,.2); flex-shrink: 0; }
+.cl-bar-wrap { flex: 1; }
+.cl-bar-label { font-size: 10px; color: var(--ink3); margin-bottom: 3px; font-weight: 600; }
+.cl-bar-bg    { background: rgba(249,115,22,.12); border-radius: 4px; height: 6px; width: 100%; overflow: hidden; }
+.cl-bar-fill  { height: 6px; border-radius: 4px; background: linear-gradient(90deg, var(--green), #34d399); transition: width .4s; }
+.cl-bar-fill.warn   { background: linear-gradient(90deg, var(--amber), #fbbf24); }
+.cl-bar-fill.danger { background: linear-gradient(90deg, var(--red), #f87171); }
+
+/* ── Duration + misc cells ───────────────────────────────────────────────── */
+.duration-from { font-weight: 600; color: var(--ink); }
+.duration-to   { font-size: 11px; color: var(--ink4); margin-top: 2px; }
+.applied-date  { font-size: 12px; color: var(--ink4); white-space: nowrap; }
+.reason-text   { color: var(--ink2); font-size: 13px; max-width: 200px; }
+.action-none   { font-size: 12px; color: var(--ink4); }
+.action-btns   { display: flex; flex-direction: column; gap: 5px; }
+</style>
+
+
+{# ════════════════════════════════════════════════════════
+   EMPLOYEE: My CL Balance card (only for 'employee' role)
+════════════════════════════════════════════════════════ #}
+{% if session.role == 'employee' and my_cl %}
+{% set pct = ((my_cl.used_cl / my_cl.total_cl) * 100)|int if my_cl.total_cl else 0 %}
+<div class="my-cl-card">
+  <h3>My Casual Leave Balance — {{ now.year }}</h3>
+  <div class="my-cl-stats-row">
+    <div class="my-cl-stat">
+      <span class="val">{{ my_cl.total_cl }}</span>
+      <span class="lbl">Total</span>
+    </div>
+    <div class="my-cl-divider"></div>
+    <div class="my-cl-stat">
+      <span class="val">{{ my_cl.used_cl }}</span>
+      <span class="lbl">Used</span>
+    </div>
+    <div class="my-cl-divider"></div>
+    <div class="my-cl-stat">
+      <span class="val" style="color:{% if my_cl.remaining <= 2 %}var(--red){% elif my_cl.remaining <= 4 %}var(--amber){% else %}var(--green){% endif %};">
+        {{ my_cl.remaining }}
+      </span>
+      <span class="lbl">Remaining</span>
+    </div>
+  </div>
+  <div class="my-cl-bar-row">
+    <span class="my-cl-bar-pct">{{ pct }}% used</span>
+    <div class="my-cl-bar-bg">
+      <div class="my-cl-bar-fill {% if pct >= 85 %}danger{% elif pct >= 60 %}warn{% endif %}"
+           style="width:{{ pct }}%;"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+{# ════════════════════════════════════════════════════════
+   ADMIN: Info banner — no apply form (admin is company head)
+   HR + Employee: Show apply for leave form normally
+════════════════════════════════════════════════════════ #}
+
+{% if session.role == 'admin' %}
+{# ── Admin sees an informational banner instead of the form ── #}
+<div class="admin-info-banner">
+  <div class="admin-info-icon">🏢</div>
+  <div class="admin-info-text">
+    <strong>Leave Management — Admin View</strong>
+    <span>As admin, you can review, approve, or reject all employee leave applications below. Leave applications are submitted by employees and HR.</span>
+  </div>
+</div>
+
+{% else %}
+{# ── HR and Employee: Show the full Apply for Leave form ── #}
+<div class="form-card">
+  <h3>Apply for Leave</h3>
+  <form method="POST" action="{{ url_for('apply_leave') }}">
+    <div class="form-grid"
+         style="grid-template-columns:{% if session.role == 'hr' %}repeat(3,1fr) repeat(2,1fr) auto{% else %}1fr 1fr 1fr 1fr auto{% endif %}; align-items:end;">
+
+      {# HR sees employee dropdown to apply leave on behalf of someone (or self) #}
+      {% if session.role == 'hr' %}
+      <div class="form-group">
+        <label>Employee</label>
+        <select name="employee_id" class="form-input" required>
+          {% for e in employees %}
+          <option value="{{ e.employee_id }}">{{ e.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label>Leave Type</label>
+        <select name="leave_type" class="form-input">
+          <option value="Casual">Casual (CL)</option>
+          <option value="Sick">Sick Leave</option>
+          <option value="Emergency">Emergency</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>From Date</label>
+        <input type="date" name="start_date" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label>To Date</label>
+        <input type="date" name="end_date" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label>Reason</label>
+        <input type="text" name="reason" class="form-input" placeholder="Brief reason…" required>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-primary">Submit</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+
+{# ════════════════════════════════════════════════════════
+   LEAVE APPLICATIONS TABLE — visible to all roles
+════════════════════════════════════════════════════════ #}
+<div class="table-card">
+  <div class="table-header">
+    <h3>Leave Applications</h3>
+    <span class="table-header-count">{{ leaves|length }} total</span>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        {% if session.role in ('admin','hr') %}<th>Employee</th>{% endif %}
+        <th>Type</th>
+        <th>Duration</th>
+        <th>Reason</th>
+        <th>Applied On</th>
+        <th>Status</th>
+        {% if session.role in ('admin','hr') %}<th>Action</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for l in leaves %}
+      <tr>
+
+        {# ── Admin / HR: employee name + dept + CL balance ── #}
+        {% if session.role in ('admin','hr') %}
+        <td>
+          <span class="emp-cell-name">{{ l.emp_name }}</span>
+          {# dept_name is available when the app.py query joins departments.
+             If it's missing (older query), the block simply doesn't render. #}
+          {% if l.dept_name %}
+          <span class="emp-cell-dept">
+            <span class="emp-dept-dot"></span>
+            {{ l.dept_name }}
+          </span>
+          {% endif %}
+
+          {% if l.leave_type == 'Casual' %}
+          {% set used_pct = ((l.cl_used / l.cl_total) * 100)|int if l.cl_total else 0 %}
+          <div class="cl-inline">
+            <div class="cl-item">
+              <span class="cl-val">{{ l.cl_total }}</span>
+              <span class="cl-lbl">Total</span>
+            </div>
+            <div class="cl-sep"></div>
+            <div class="cl-item">
+              <span class="cl-val">{{ l.cl_used }}</span>
+              <span class="cl-lbl">Used</span>
+            </div>
+            <div class="cl-sep"></div>
+            <div class="cl-item">
+              <span class="cl-val" style="color:{% if l.cl_remaining <= 2 %}var(--red){% elif l.cl_remaining <= 4 %}var(--amber){% else %}var(--green){% endif %};">
+                {{ l.cl_remaining }}
+              </span>
+              <span class="cl-lbl">Left</span>
+            </div>
+            <div class="cl-sep"></div>
+            <div class="cl-bar-wrap">
+              <div class="cl-bar-label">{{ used_pct }}% used</div>
+              <div class="cl-bar-bg">
+                <div class="cl-bar-fill {% if used_pct >= 85 %}danger{% elif used_pct >= 60 %}warn{% endif %}"
+                     style="width:{{ used_pct }}%;"></div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </td>
+        {% endif %}
+
+        <td>
+          <span class="badge {% if l.leave_type == 'Casual' %}badge-blue{% elif l.leave_type == 'Sick' %}badge-orange{% else %}badge-gray{% endif %}">
+            {{ l.leave_type }}
+          </span>
+        </td>
+
+        <td style="white-space:nowrap;">
+          <div class="duration-from">{{ l.start_date }}</div>
+          <div class="duration-to">to {{ l.end_date }}</div>
+        </td>
+
+        <td><span class="reason-text">{{ l.reason or '—' }}</span></td>
+        <td><span class="applied-date">{{ l.applied_on or '—' }}</span></td>
+
+        <td>
+          <span class="badge {% if l.status=='Approved' %}badge-green{% elif l.status=='Rejected' %}badge-red{% else %}badge-orange{% endif %}">
+            {{ l.status }}
+          </span>
+        </td>
+
+        {% if session.role in ('admin','hr') %}
+        <td style="white-space:nowrap;">
+          {% if l.status == 'Pending' %}
+          <div class="action-btns">
+            <a href="{{ url_for('leave_action', lid=l.leave_id, action='approve') }}"
+               class="btn-sm btn-approve">✓ Approve</a>
+            <a href="{{ url_for('leave_action', lid=l.leave_id, action='reject') }}"
+               class="btn-sm btn-reject">✕ Reject</a>
+          </div>
+          {% else %}
+          <span class="action-none">—</span>
+          {% endif %}
+        </td>
+        {% endif %}
+
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="{% if session.role in ('admin','hr') %}7{% else %}5{% endif %}" class="empty-row">
+          No leave applications yet.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% block title %}My Payslip{% endblock %}
+{% block page_title %}My Payslip{% endblock %}
+
+{% block content %}
+<style>
+/* ── Month pill tabs ───────────────────────────────────── */
+.month-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+  align-items: center;
+}
+.month-pill {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  text-decoration: none;
+  transition: all var(--anim);
+  white-space: nowrap;
+}
+.month-pill:hover { border-color: var(--brand); color: var(--brand); }
+.month-pill.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--brand-glow);
+}
+
+/* ── Quick stat cards ──────────────────────────────────── */
+.qs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+@media(max-width:700px){ .qs-grid { grid-template-columns: 1fr; } }
+.qs-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  box-shadow: var(--shadow);
+  border-top: 3px solid var(--qc, var(--brand));
+}
+.qs-val { font-size: 20px; font-weight: 700; color: var(--text-1); font-family: var(--mono); line-height: 1; }
+.qs-lbl { font-size: 11px; color: var(--text-3); font-weight: 500; margin-top: 5px; }
+
+/* ── Two-col layout ────────────────────────────────────── */
+.ps-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: flex-start;
+}
+@media(max-width:900px){ .ps-layout { grid-template-columns: 1fr; } }
+
+/* ── Payslip document card ─────────────────────────────── */
+.payslip-doc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* Status banner */
+.ps-status-banner {
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.ps-status-banner.paid    { background: #d1fae5; color: #065f46; border-bottom: 1px solid #6ee7b7; }
+.ps-status-banner.pending { background: #fef3c7; color: #92400e; border-bottom: 1px solid #fde68a; }
+
+/* Payslip header */
+.ps-header {
+  padding: 18px 22px 14px;
+  border-bottom: 2px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ps-company-name { font-size: 17px; font-weight: 700; color: var(--text-1); }
+.ps-company-sub  { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.ps-slip-label   { text-align: right; }
+.ps-slip-title   { font-size: 13px; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: .06em; }
+.ps-slip-period  { font-size: 11px; color: var(--text-3); margin-top: 2px; font-family: var(--mono); }
+
+/* Employee details band */
+.ps-emp-band {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.ps-emp-cell {
+  padding: 10px 22px;
+  border-right: 1px solid var(--border-light);
+}
+.ps-emp-cell:nth-child(even) { border-right: none; }
+.ps-emp-key  { font-size: 10.5px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.ps-emp-val  { font-size: 13px; font-weight: 600; color: var(--text-1); margin-top: 2px; }
+
+/* Earnings / Deductions table */
+.ps-breakdown { padding: 0 22px 0; }
+.ps-breakdown-header {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 10px 0 6px;
+  border-bottom: 2px solid var(--border);
+}
+.ps-breakdown-header span {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.ps-breakdown-header span:not(:first-child) { text-align: right; }
+.ps-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  align-items: center;
+}
+.ps-row:last-child { border-bottom: none; }
+.ps-row-label { font-size: 13px; color: var(--text-2); }
+.ps-row-earn  { font-size: 13px; font-weight: 500; color: var(--text-1); text-align: right; font-family: var(--mono); min-width: 90px; }
+.ps-row-deduct{ font-size: 13px; font-weight: 500; color: #ef4444; text-align: right; font-family: var(--mono); min-width: 90px; }
+.ps-row-zero  { font-size: 13px; color: var(--text-3); text-align: right; min-width: 90px; }
+
+/* Net salary footer */
+.ps-net-footer {
+  margin: 0 22px 18px;
+  background: var(--brand);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ps-net-lbl { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.75); text-transform: uppercase; letter-spacing: .06em; }
+.ps-net-val { font-size: 26px; font-weight: 700; color: #fff; font-family: var(--mono); }
+
+/* Download button inside card */
+.ps-download-row {
+  padding: 0 22px 18px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── Chart card ────────────────────────────────────────── */
+.chart-outer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── History table ─────────────────────────────────────── */
+.trend-up   { color: #1D9E75; font-weight: 600; }
+.trend-down { color: #ef4444; font-weight: 600; }
+.trend-flat { color: var(--text-3); }
+</style>
+
+<!-- Month pill tabs -->
+<div class="month-pills">
+  <span style="font-size:12px;font-weight:600;color:var(--text-3);margin-right:4px;">Period:</span>
+  {% for p in last6 %}
+  <a href="{{ url_for('my_payslip', month=p.month, year=p.year) }}"
+     class="month-pill {% if p.month == month and p.year == year %}active{% endif %}">
+    {{ p.label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Quick stats -->
+<div class="qs-grid">
+  <div class="qs-card" style="--qc:#1D9E75;">
+    <div class="qs-val">₹{{ "{:,.0f}".format(avg_salary) }}</div>
+    <div class="qs-lbl">Avg Monthly Salary (12 months)</div>
+  </div>
+  <div class="qs-card" style="--qc:#4f46e5;">
+    <div class="qs-val">₹{{ "{:,.0f}".format(highest_pay) }}</div>
+    <div class="qs-lbl">Highest Month</div>
+  </div>
+  <div class="qs-card" style="--qc:#f59e0b;">
+    <div class="qs-val">₹{{ "{:,.0f}".format(total_ytd) }}</div>
+    <div class="qs-lbl">Total Earned {{ now.year if now is defined else '' }}</div>
+  </div>
+</div>
+
+{% if payroll and emp %}
+<div class="ps-layout">
+
+  <!-- ── Left: Payslip Document ── -->
+  <div class="payslip-doc">
+
+    <!-- Status banner -->
+    <div class="ps-status-banner {{ 'paid' if payroll.payment_status == 'Paid' else 'pending' }}">
+      {{ '✓ Salary Paid' if payroll.payment_status == 'Paid' else '⏳ Payment Pending' }}
+    </div>
+
+    <!-- Company header -->
+    <div class="ps-header">
+      <div>
+        <div class="ps-company-name">PayrollPro Inc.</div>
+        <div class="ps-company-sub">HR Management System</div>
+      </div>
+      <div class="ps-slip-label">
+        <div class="ps-slip-title">Salary Slip</div>
+        <div class="ps-slip-period">{{ month_name }} {{ year }}</div>
+      </div>
+    </div>
+
+    <!-- Employee details -->
+    <div class="ps-emp-band">
+      <div class="ps-emp-cell">
+        <div class="ps-emp-key">Employee</div>
+        <div class="ps-emp-val">{{ emp.name }}</div>
+      </div>
+      <div class="ps-emp-cell">
+        <div class="ps-emp-key">Department</div>
+        <div class="ps-emp-val">{{ emp.dept_name }}</div>
+      </div>
+      <div class="ps-emp-cell">
+        <div class="ps-emp-key">Position</div>
+        <div class="ps-emp-val">{{ emp.position }}</div>
+      </div>
+      <div class="ps-emp-cell">
+        <div class="ps-emp-key">Pay Period</div>
+        <div class="ps-emp-val">{{ month_name }} {{ year }}</div>
+      </div>
+    </div>
+
+    <!-- Earnings & Deductions -->
+    <div class="ps-breakdown">
+      <div class="ps-breakdown-header">
+        <span>Description</span>
+        <span>Earnings</span>
+        <span>Deductions</span>
+      </div>
+
+      <div class="ps-row">
+        <div class="ps-row-label">Basic Pay</div>
+        <div class="ps-row-earn">₹{{ "{:,.2f}".format(payroll.basic_pay) }}</div>
+        <div class="ps-row-zero">—</div>
+      </div>
+
+      <div class="ps-row">
+        <div class="ps-row-label">Overtime</div>
+        <div class="ps-row-earn">₹{{ "{:,.2f}".format(payroll.overtime_pay) }}</div>
+        <div class="ps-row-zero">—</div>
+      </div>
+
+      <div class="ps-row">
+        <div class="ps-row-label">Absent Deduction</div>
+        <div class="ps-row-zero">—</div>
+        <div class="ps-row-deduct">−₹{{ "{:,.2f}".format(payroll.deductions) }}</div>
+      </div>
+
+      <!-- Subtotal row -->
+      <div class="ps-row" style="background:var(--bg);margin:0 -22px;padding:8px 22px;border-top:1.5px solid var(--border);font-weight:600;">
+        <div class="ps-row-label" style="font-weight:700;color:var(--text-1);">Total</div>
+        <div class="ps-row-earn" style="color:var(--brand);">₹{{ "{:,.2f}".format(payroll.basic_pay + payroll.overtime_pay) }}</div>
+        <div class="ps-row-deduct">−₹{{ "{:,.2f}".format(payroll.deductions) }}</div>
+      </div>
+    </div>
+
+    <!-- Net salary footer -->
+    <div style="padding:16px 22px 0;">
+      <div class="ps-net-footer">
+        <div class="ps-net-lbl">Net Salary Payable</div>
+        <div class="ps-net-val">₹{{ "{:,.2f}".format(payroll.net_salary) }}</div>
+      </div>
+    </div>
+
+    <!-- Download button -->
+    <div class="ps-download-row">
+      {% if emp %}
+      <a href="{{ url_for('download_payslip', emp_id=emp.employee_id, month=month, year=year) }}"
+         class="btn btn-primary" style="gap:6px;">
+        ⬇ Download PDF
+      </a>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- ── Right: Chart + mini stats ── -->
+  <div class="chart-outer">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3>Salary Trend — Last 12 Months</h3>
+      </div>
+      <canvas id="salaryChart" height="220"></canvas>
+    </div>
+  </div>
+
+</div>
+
+{% else %}
+<!-- No payslip found -->
+<div class="card" style="text-align:center;padding:48px 24px;">
+  <div style="font-size:40px;margin-bottom:12px;">📄</div>
+  <div style="font-size:16px;font-weight:600;color:var(--text-1);margin-bottom:6px;">No Payslip for {{ month_name }} {{ year }}</div>
+  <div style="font-size:13px;color:var(--text-3);">Ask HR to calculate payroll for this month first.</div>
+</div>
+{% endif %}
+
+<!-- History table -->
+{% if history %}
+<div class="table-card" style="margin-top:20px;">
+  <div class="table-header">
+    <h3>Payroll History</h3>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Month / Year</th>
+        <th>Net Salary</th>
+        <th>Trend</th>
+        <th>Status</th>
+        <th>Download</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in history %}
+      {% set prev = history[loop.index] if loop.index < history|length else none %}
+      {% set trend_class = 'trend-flat' %}
+      {% set trend_icon  = '→' %}
+      {% if prev %}
+        {% if h.net_salary > prev.net_salary %}
+          {% set trend_class = 'trend-up' %}{% set trend_icon = '↑' %}
+        {% elif h.net_salary < prev.net_salary %}
+          {% set trend_class = 'trend-down' %}{% set trend_icon = '↓' %}
+        {% endif %}
+      {% endif %}
+      <tr>
+        <td style="font-weight:600;color:var(--text-1);">
+          {{ ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][h.month-1] }} {{ h.year }}
+        </td>
+        <td><span style="font-family:var(--mono);font-weight:600;">₹{{ "{:,.2f}".format(h.net_salary) }}</span></td>
+        <td><span class="{{ trend_class }}">{{ trend_icon }}</span></td>
+        <td>
+          <span class="badge badge-{{ 'green' if h.payment_status == 'Paid' else 'orange' }}">
+            {{ h.payment_status }}
+          </span>
+        </td>
+        <td>
+          {% if emp %}
+          <a href="{{ url_for('download_payslip', emp_id=emp.employee_id, month=h.month, year=h.year) }}"
+             class="btn btn-xs btn-outline">⬇ PDF</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if history %}
+const hist = {{ history_json | safe }};
+// Reverse so oldest is on left
+const labels = hist.map(h => {
+  const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return names[h.month - 1] + ' ' + h.year;
+}).reverse();
+const data = hist.map(h => h.net_salary).reverse();
+
+new Chart(document.getElementById('salaryChart'), {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Net Salary',
+      data: data,
+      borderColor: '#1D9E75',
+      backgroundColor: 'rgba(26,107,74,.08)',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#1D9E75',
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => '₹' + ctx.parsed.y.toLocaleString('en-IN')
+        }
+      }
+    },
+    scales: {
+      y: {
+        ticks: {
+          callback: v => '₹' + (v/1000).toFixed(0) + 'K',
+          font: { size: 11 }
+        },
+        grid: { color: 'rgba(0,0,0,.04)' }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 11 }, maxRotation: 40 }
+      }
+    }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

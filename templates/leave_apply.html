@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}Apply for Leave{% endblock %}
+{% block page_title %}Apply for Leave{% endblock %}
+
+{% block content %}
+<style>
+/* ── Orange theme tokens ─────────────────────────────────────────────────── */
+:root {
+  --or:       #E85D30;
+  --or-dark:  #C94820;
+  --or-light: #FEF0E9;
+  --or-mid:   #FDDACB;
+  --or-bdr:   #F5B99F;
+  --green:    #1D9E75;
+  --amber:    #BA7517;
+  --red-cl:   #D85A30;
+  --ink:      #1a1a1a;
+  --ink2:     #555;
+  --ink3:     #888;
+  --bdr:      #e5e5e5;
+  --r:        12px;
+  --sh:       0 2px 12px rgba(232,93,48,.09), 0 1px 3px rgba(0,0,0,.05);
+}
+
+/* ── CL Balance card ─────────────────────────────────────────────────────── */
+.cl-card {
+  background: #fff;
+  border: 1px solid var(--or-bdr);
+  border-top: 3px solid var(--or);
+  border-radius: var(--r);
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  box-shadow: var(--sh);
+}
+.cl-card-hdr {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.cl-card-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--or-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.cl-card-hdr h3 {
+  font-size: 13.5px; font-weight: 700;
+  color: var(--ink); margin: 0;
+}
+.cl-stats-row {
+  display: flex; align-items: center;
+  background: var(--or-light);
+  border: 1px solid var(--or-mid);
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 14px;
+}
+.cl-stat {
+  display: flex; flex-direction: column;
+  gap: 3px; flex: 1; text-align: center;
+}
+.cl-stat .val {
+  font-size: 28px; font-weight: 700;
+  color: var(--ink); line-height: 1;
+}
+.cl-stat .lbl {
+  font-size: 10px; color: var(--ink3);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-top: 2px;
+}
+.cl-divider {
+  width: 1px; height: 40px;
+  background: var(--or-mid); flex-shrink: 0;
+}
+.cl-bar-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.cl-bar-pct {
+  font-size: 12px; font-weight: 600;
+  color: var(--ink3); white-space: nowrap; min-width: 58px;
+}
+.cl-bar-bg {
+  flex: 1; background: #ececec;
+  border-radius: 6px; height: 9px; overflow: hidden;
+}
+.cl-bar-fill {
+  height: 9px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--green), #34c898);
+  transition: width .5s ease;
+}
+.cl-bar-fill.warn   { background: linear-gradient(90deg, var(--amber), #e6a020); }
+.cl-bar-fill.danger { background: linear-gradient(90deg, var(--red-cl), #f07050); }
+
+/* ── Form card ───────────────────────────────────────────────────────────── */
+.form-card {
+  background: #fff;
+  border: 1px solid var(--bdr);
+  border-top: 3px solid var(--or);
+  border-radius: var(--r);
+  padding: 22px 24px;
+  box-shadow: var(--sh);
+}
+.form-card-hdr {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+}
+.form-card-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--or-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.form-card-hdr h3 {
+  font-size: 13.5px; font-weight: 700;
+  color: var(--ink); margin: 0;
+}
+
+/* 3-col top row */
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 640px) { .form-grid-3 { grid-template-columns: 1fr; } }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label {
+  font-size: 11px; font-weight: 600; color: var(--ink3);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.form-input {
+  padding: 9px 12px;
+  border: 1.5px solid var(--bdr);
+  border-radius: 9px;
+  font-size: 13px; color: var(--ink);
+  outline: none;
+  transition: border .15s, box-shadow .15s;
+  background: #fff; font-family: inherit;
+  width: 100%;
+}
+.form-input:focus {
+  border-color: var(--or);
+  box-shadow: 0 0 0 3px rgba(232,93,48,.10);
+}
+
+/* Reason textarea — full width, tall, user-friendly */
+.reason-wrap { margin-bottom: 16px; }
+.reason-textarea {
+  width: 100%;
+  min-height: 110px;
+  max-height: 240px;
+  resize: vertical;
+  padding: 12px 14px;
+  border: 1.5px solid var(--bdr);
+  border-radius: 9px;
+  font-size: 13px; color: var(--ink);
+  font-family: inherit;
+  line-height: 1.65;
+  outline: none;
+  transition: border .15s, box-shadow .15s;
+  background: #fafafa;
+  box-sizing: border-box;
+  display: block;
+}
+.reason-textarea:focus {
+  border-color: var(--or);
+  box-shadow: 0 0 0 3px rgba(232,93,48,.10);
+  background: #fff;
+}
+.reason-textarea::placeholder { color: #bbb; }
+.reason-char {
+  font-size: 11px; color: var(--ink3);
+  text-align: right; margin-top: 4px;
+}
+
+/* Info box */
+.info-box {
+  background: var(--or-light);
+  border: 1px solid var(--or-mid);
+  border-radius: 9px;
+  padding: 11px 14px;
+  font-size: 12px; color: #8a3a18;
+  margin-bottom: 18px;
+  display: flex; align-items: flex-start; gap: 7px;
+}
+
+/* Buttons */
+.btn-submit {
+  padding: 11px 28px;
+  background: linear-gradient(135deg, var(--or), var(--or-dark));
+  color: #fff; border: none; border-radius: 9px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 3px 10px rgba(232,93,48,.35);
+  transition: transform .15s, box-shadow .15s;
+  font-family: inherit;
+}
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(232,93,48,.45);
+}
+.btn-submit:active { transform: scale(.97); }
+
+.btn-history {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 11px 18px;
+  border: 1.5px solid var(--bdr); color: var(--ink2);
+  border-radius: 9px; font-size: 13px; font-weight: 500;
+  text-decoration: none;
+  transition: border-color .15s, color .15s;
+  font-family: inherit;
+}
+.btn-history:hover { border-color: var(--or); color: var(--or); }
+</style>
+
+<!-- ── CL Balance card ────────────────────────────────────────────────────── -->
+{% if my_cl %}
+{% set pct = ((my_cl.used_cl / my_cl.total_cl) * 100)|int if my_cl.total_cl else 0 %}
+<div class="cl-card">
+  <div class="cl-card-hdr">
+    <div class="cl-card-icon">🌿</div>
+    <h3>My Casual Leave Balance — {{ now.year }}</h3>
+  </div>
+  <div class="cl-stats-row">
+    <div class="cl-stat">
+      <span class="val">{{ my_cl.total_cl }}</span>
+      <span class="lbl">Total</span>
+    </div>
+    <div class="cl-divider"></div>
+    <div class="cl-stat">
+      <span class="val" style="color:var(--red-cl);">{{ my_cl.used_cl }}</span>
+      <span class="lbl">Used</span>
+    </div>
+    <div class="cl-divider"></div>
+    <div class="cl-stat">
+      <span class="val" style="color:{% if my_cl.remaining <= 2 %}var(--red-cl){% elif my_cl.remaining <= 4 %}var(--amber){% else %}var(--green){% endif %};">
+        {{ my_cl.remaining }}
+      </span>
+      <span class="lbl">Remaining</span>
+    </div>
+  </div>
+  <div class="cl-bar-row">
+    <span class="cl-bar-pct">{{ pct }}% used</span>
+    <div class="cl-bar-bg">
+      <div class="cl-bar-fill {% if pct >= 85 %}danger{% elif pct >= 60 %}warn{% endif %}"
+           style="width:{{ pct }}%;"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Apply for Leave form ───────────────────────────────────────────────── -->
+<div class="form-card">
+  <div class="form-card-hdr">
+    <div class="form-card-icon">📋</div>
+    <h3>Submit a Leave Request</h3>
+  </div>
+
+  <form method="POST" action="{{ url_for('apply_leave') }}">
+
+    <!-- Row 1: Leave Type, From, To -->
+    <div class="form-grid-3">
+      <div class="form-group">
+        <label>Leave Type</label>
+        <select name="leave_type" class="form-input">
+          <option value="Casual">Casual (CL)</option>
+          <option value="Sick">Sick Leave</option>
+          <option value="Emergency">Emergency</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>From Date</label>
+        <input type="date" name="start_date" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label>To Date</label>
+        <input type="date" name="end_date" class="form-input" required>
+      </div>
+    </div>
+
+    <!-- Row 2: Reason — full width, tall textarea -->
+    <div class="reason-wrap">
+      <div class="form-group">
+        <label>Reason <span style="color:var(--or);">*</span></label>
+        <textarea name="reason" class="reason-textarea"
+                  placeholder="Describe your reason for leave in detail. Include any relevant context that will help HR process your request quickly…"
+                  maxlength="500"
+                  oninput="updateChar(this)"
+                  required></textarea>
+        <div class="reason-char"><span id="charCount">0</span> / 500</div>
+      </div>
+    </div>
+
+    <!-- Info notice -->
+    <div class="info-box">
+      <span>ℹ️</span>
+      <span>Casual Leave requests are deducted from your CL balance once approved. Ensure your dates are correct before submitting.</span>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <button type="submit" class="btn-submit">Submit Request →</button>
+      <a href="{{ url_for('leave_history') }}" class="btn-history">← View My History</a>
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateChar(el) {
+  document.getElementById('charCount').textContent = el.value.length;
+}
+</script>
+{% endblock %}

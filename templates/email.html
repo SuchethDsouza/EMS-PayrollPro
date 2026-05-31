@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+{% block title %}Email{% endblock %}
+{% block page_title %}HR Email Portal{% endblock %}
+
+{% block content %}
+<style>
+/* ── Page layout ─────────────────────────────────────────────────────────── */
+.email-portal {
+  display: grid;
+  grid-template-columns: 1fr minmax(300px, 380px);
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 1024px) { .email-portal { grid-template-columns: 1fr; } }
+
+/* ── Sub-header toolbar ─────────────────────────────────────────────────── */
+.ep-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px; gap: 12px; flex-wrap: wrap;
+}
+.ep-toolbar-left h2 { font-size: 15px; font-weight: 700; color: var(--text-1); }
+.ep-toolbar-left p  { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+.ep-toolbar-right { display: flex; gap: 8px; }
+.ep-tool-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 8px; font-size: 12.5px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-2); font-family: var(--font); transition: all var(--anim);
+  text-decoration: none;
+}
+.ep-tool-btn:hover { background: var(--bg); border-color: var(--brand); color: var(--brand); }
+
+/* ── Compose panel ──────────────────────────────────────────────────────── */
+.compose-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden;
+}
+.compose-header {
+  padding: 16px 22px; border-bottom: 1px solid var(--border-light);
+  display: flex; align-items: center; gap: 12px;
+}
+.compose-header-icon {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--brand-dim);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.compose-header-icon svg { color: var(--brand); }
+.compose-header h3 { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.compose-header p  { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+
+/* Section dividers */
+.compose-section { padding: 16px 22px; border-bottom: 1px solid var(--border-light); }
+.compose-section:last-of-type { border-bottom: none; }
+.cslabel {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-3); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.cslabel::after { content:''; flex:1; height:1px; background: var(--border-light); }
+
+/* Recipient card */
+.rp-card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--border-light);
+  border-radius: 10px; padding: 10px 14px; margin-top: 10px;
+}
+.rp-avatar {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--brand); color: #fff; font-size: 15px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.rp-name  { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.rp-email { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+
+/* Template chips */
+.tpl-row { display: flex; gap: 7px; flex-wrap: wrap; }
+.tpl-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px;
+  border-radius: 20px; font-size: 12px; font-weight: 500; font-family: var(--font);
+  cursor: pointer; border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text-2); transition: all var(--anim); white-space: nowrap;
+}
+.tpl-chip:hover, .tpl-chip.tpl-active {
+  border-color: var(--brand); background: var(--brand-dim); color: var(--brand);
+}
+
+/* Message area */
+textarea.form-input.ep-textarea {
+  min-height: 210px; resize: vertical; font-family: var(--font);
+  font-size: 13.5px; line-height: 1.65; padding: 14px;
+  background: #fafbfc; border-color: var(--border-light);
+}
+textarea.form-input.ep-textarea:focus { background: var(--surface); }
+
+/* Action bar */
+.compose-actions {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 22px; background: var(--bg);
+  border-top: 1px solid var(--border-light);
+}
+.btn-send {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 24px; background: var(--brand); color: #fff;
+  border: none; border-radius: 9px; font-size: 13.5px; font-weight: 600;
+  font-family: var(--font); cursor: pointer; transition: all var(--anim);
+}
+.btn-send:hover {
+  background: var(--brand-light);
+  box-shadow: 0 4px 14px var(--brand-glow);
+  transform: translateY(-1px);
+}
+.btn-draft {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; background: transparent; color: var(--text-3);
+  border: 1px solid var(--border); border-radius: 9px; font-size: 13px;
+  font-weight: 500; font-family: var(--font); cursor: pointer; transition: all var(--anim);
+}
+.btn-draft:hover { background: var(--surface); color: var(--text-2); }
+
+/* Setup note */
+.ep-note {
+  display: flex; gap: 10px; background: var(--blue-bg);
+  border: 1px solid #bfdbfe; border-radius: 9px; padding: 11px 14px;
+  font-size: 12px; color: var(--blue); margin: 14px 22px 16px; line-height: 1.5;
+}
+.ep-note svg { flex-shrink: 0; margin-top: 1px; }
+.ep-note a { color: var(--blue); font-weight: 600; }
+.ep-note code { font-family: var(--mono); font-size: 11px; background: rgba(37,99,235,.1); padding: 1px 5px; border-radius: 4px; }
+
+/* ── Activity sidebar ───────────────────────────────────────────────────── */
+.activity-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.activity-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--border-light);
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fafbfc;
+}
+.activity-header h3 {
+  font-size: 13px; font-weight: 600; color: var(--text-1);
+  display: flex; align-items: center; gap: 7px;
+}
+.act-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); flex-shrink: 0; }
+.activity-count {
+  font-size: 11px; font-weight: 600;
+  background: var(--brand-dim); color: var(--brand);
+  padding: 2px 8px; border-radius: 20px;
+}
+.activity-feed {
+  overflow-y: auto; max-height: 660px;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.activity-feed::-webkit-scrollbar { width: 3px; }
+.activity-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* Log cards */
+.log-card {
+  display: flex; gap: 11px; padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--anim);
+}
+.log-card:last-child { border-bottom: none; }
+.log-card:hover { background: var(--bg); }
+.log-av {
+  width: 33px; height: 33px; border-radius: 9px;
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.log-av-ok   { background: var(--green-bg); color: var(--green); }
+.log-av-fail { background: var(--red-bg);   color: var(--red);   }
+.log-body { flex: 1; min-width: 0; }
+.log-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 4px; margin-bottom: 2px;
+}
+.log-name  { font-size: 12.5px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log-time  { font-size: 10.5px; color: var(--text-3); white-space: nowrap; flex-shrink: 0; font-family: var(--mono); }
+.log-subj  { font-size: 12px; font-weight: 500; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.log-foot  { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); }
+.log-pill-ok   { display:inline-flex; align-items:center; gap:3px; padding: 2px 7px; border-radius: 20px; font-size: 10.5px; font-weight: 600; background: var(--green-bg); color: var(--green); }
+.log-pill-fail { display:inline-flex; align-items:center; gap:3px; padding: 2px 7px; border-radius: 20px; font-size: 10.5px; font-weight: 600; background: var(--red-bg); color: var(--red); }
+
+.activity-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 20px; gap: 10px; color: var(--text-3);
+}
+.activity-empty svg { opacity: .25; }
+.activity-empty p { font-size: 13px; }
+</style>
+
+<!-- ── Sub toolbar ───────────────────────────────────────────────────────── -->
+<div class="ep-toolbar">
+  <div class="ep-toolbar-left">
+    <h2>HR Email Portal</h2>
+    <p>Compose and send emails to employees directly from PayrollPro</p>
+  </div>
+  <div class="ep-toolbar-right">
+    <a href="{{ url_for('email_page') }}" class="ep-tool-btn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>Refresh
+    </a>
+    <button type="button" class="ep-tool-btn" onclick="window.print()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="8 17 3 17 3 10 21 10 21 17 16 17"/><rect x="8" y="13" width="8" height="8"/><polyline points="8 10 8 3 16 3 16 10"/>
+      </svg>Export
+    </button>
+  </div>
+</div>
+
+<!-- ── Portal grid ───────────────────────────────────────────────────────── -->
+<div class="email-portal">
+
+  <!-- ── Compose ─────────────────────────────────────────────────────── -->
+  <div class="compose-panel">
+
+    <div class="compose-header">
+      <div class="compose-header-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+      </div>
+      <div>
+        <h3>Compose New Email</h3>
+        <p>Send a personalised message to any employee</p>
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('email_page') }}">
+
+      <!-- ① Recipient -->
+      <div class="compose-section">
+        <div class="cslabel">Recipient</div>
+        <div class="form-group">
+          <select name="recipient_id" class="form-input" required id="recipientSel" onchange="updateRecipientInfo()">
+            {% for e in employees %}
+            <option value="{{ e.employee_id }}" data-email="{{ e.email }}">{{ e.name }} — {{ e.email }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="rp-card">
+          <div class="rp-avatar" id="rpAvatar">A</div>
+          <div>
+            <div class="rp-name"  id="rpName"></div>
+            <div class="rp-email" id="rpEmail"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② Subject -->
+      <div class="compose-section">
+        <div class="cslabel">Subject</div>
+        <div class="form-group">
+          <input type="text" name="subject" id="emailSubject" class="form-input" required placeholder="Enter email subject…" style="font-size:14px; font-weight:500;">
+        </div>
+      </div>
+
+      <!-- ③ Quick Templates -->
+      <div class="compose-section">
+        <div class="cslabel">Quick Templates</div>
+        <div class="tpl-row">
+          <button type="button" class="tpl-chip" onclick="setTemplate('payslip',this)">💰 Payslip</button>
+          <button type="button" class="tpl-chip" onclick="setTemplate('leave',this)">🌿 Leave Update</button>
+          <button type="button" class="tpl-chip" onclick="setTemplate('warning',this)">⚠️ Warning</button>
+          <button type="button" class="tpl-chip" onclick="setTemplate('appreciation',this)">🏆 Appreciation</button>
+        </div>
+      </div>
+
+      <!-- ④ Message -->
+      <div class="compose-section">
+        <div class="cslabel">Message</div>
+        <div class="form-group">
+          <textarea name="body" id="emailBody" class="form-input ep-textarea"
+                    required placeholder="Type your message here…"></textarea>
+        </div>
+      </div>
+
+      <!-- ⑤ Actions -->
+      <div class="compose-actions">
+        <button type="submit" class="btn-send">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>Send Email
+        </button>
+        <button type="button" class="btn-draft">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>Save Draft
+        </button>
+        <span style="margin-left:auto; font-size:11.5px; color:var(--text-3);">Sent via Gmail SMTP</span>
+      </div>
+
+    </form>
+
+    <div class="ep-note">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span><strong>Setup required:</strong> Open <code>email_service.py</code> and add your Gmail address and App Password.
+      <a href="https://myaccount.google.com/apppasswords" target="_blank">Get App Password →</a>
+      &nbsp;Emails are logged in the activity feed even if sending fails.</span>
+    </div>
+
+  </div>
+
+  <!-- ── Activity Sidebar ─────────────────────────────────────────────── -->
+  <div class="activity-panel">
+
+    <div class="activity-header">
+      <h3><span class="act-dot"></span>Email Activity</h3>
+      <span class="activity-count">{{ logs|length }} sent</span>
+    </div>
+
+    <div class="activity-feed">
+      {% for log in logs %}
+      {% set ok   = log.status == 'Sent' %}
+      {% set init = log.recipient_name[0].upper() if log.recipient_name else '?' %}
+      <div class="log-card">
+        <div class="log-av {{ 'log-av-ok' if ok else 'log-av-fail' }}">{{ init }}</div>
+        <div class="log-body">
+          <div class="log-top">
+            <span class="log-name">{{ log.recipient_name }}</span>
+            <span class="log-time">{{ log.sent_at[5:16] if log.sent_at else '—' }}</span>
+          </div>
+          <div class="log-subj">{{ log.subject }}</div>
+          <div class="log-foot">
+            <span class="{{ 'log-pill-ok' if ok else 'log-pill-fail' }}">{{ '✓ Sent' if ok else '✕ Failed' }}</span>
+            <span>{{ log.recipient_email }}</span>
+          </div>
+          <div style="font-size:11px; color:var(--text-3); margin-top:4px;">By {{ log.sender }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="activity-empty">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <p>No emails sent yet</p>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const employees = [
+  {% for e in employees %}
+  { id: {{ e.employee_id }}, name: "{{ e.name }}", email: "{{ e.email }}" },
+  {% endfor %}
+];
+
+function updateRecipientInfo() {
+  const sel  = document.getElementById('recipientSel');
+  const opt  = sel.options[sel.selectedIndex];
+  const name = opt.text.split('—')[0].trim();
+  document.getElementById('rpAvatar').textContent = name[0].toUpperCase();
+  document.getElementById('rpName').textContent   = name;
+  document.getElementById('rpEmail').textContent  = opt.getAttribute('data-email');
+}
+
+const templates = {
+  payslip: {
+    subject: 'Your Payslip for This Month',
+    body: `Dear Employee,\n\nPlease find attached your payslip for this month.\n\nYour net salary has been processed and will be credited to your registered bank account within 2 working days.\n\nIf you have any queries, please contact HR.\n\nRegards,\nHR Team — PayrollPro`
+  },
+  leave: {
+    subject: 'Leave Application Status Update',
+    body: `Dear Employee,\n\nYour leave application has been reviewed by HR.\n\nPlease login to the PayrollPro portal to check the updated status of your leave request.\n\nIf you have any concerns, feel free to contact HR.\n\nRegards,\nHR Team — PayrollPro`
+  },
+  warning: {
+    subject: 'Official Warning Notice',
+    body: `Dear Employee,\n\nThis is an official notice regarding your attendance/conduct which has been flagged by the HR department.\n\nWe request you to maintain proper discipline and report any issues to your manager immediately.\n\nPlease treat this communication as an official warning.\n\nRegards,\nHR Team — PayrollPro`
+  },
+  appreciation: {
+    subject: 'Appreciation for Outstanding Performance',
+    body: `Dear Employee,\n\nWe are pleased to recognize your outstanding performance and dedication this month.\n\nYour hard work and commitment have not gone unnoticed. Keep up the excellent work!\n\nCongratulations and thank you for being a valuable part of our team.\n\nRegards,\nHR Team — PayrollPro`
+  }
+};
+
+function setTemplate(key, btn) {
+  const t = templates[key];
+  document.getElementById('emailSubject').value = t.subject;
+  document.getElementById('emailBody').value    = t.body;
+  document.querySelectorAll('.tpl-chip').forEach(c => c.classList.remove('tpl-active'));
+  btn.classList.add('tpl-active');
+}
+
+// Init on load
+updateRecipientInfo();
+</script>
+{% endblock %}

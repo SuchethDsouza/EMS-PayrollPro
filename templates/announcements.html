@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Announcements{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+
+{% block content %}
+<style>
+/* ── Modal banner — matches departments.html style ── */
+.ann-modal-banner {
+  background: linear-gradient(135deg, var(--brand) 0%, #f07a64 100%);
+  padding: 18px 22px 16px;
+  position: relative;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.ann-modal-banner-title { font-size: 15px; font-weight: 700; color: #fff; }
+.ann-modal-banner-sub   { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 2px; }
+.ann-modal-close-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: none;
+  background: rgba(255,255,255,.18); color: #fff; cursor: pointer;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+  transition: background var(--anim);
+  position: absolute; right: 16px; top: 16px;
+}
+.ann-modal-close-btn:hover { background: rgba(255,255,255,.3); }
+.ann-section-label {
+  font-size: 10.5px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .09em;
+  margin: 18px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.ann-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-light); }
+</style>
+
+{% if session.role in ('admin','hr') %}
+<div class="page-actions">
+  <button class="btn btn-primary" onclick="toggleModal('addAnnModal')">+ Post Announcement</button>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:{% if session.role in ('admin','hr') %}1fr 380px{% else %}1fr{% endif %};gap:20px;align-items:flex-start;">
+
+  <!-- Active Announcements -->
+  <div>
+    <div class="section-title" style="margin-bottom:12px;">Active Announcements</div>
+    {% for a in announcements %}
+    <div class="chart-card" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span class="badge badge-{{ 'red' if a.priority=='High' else ('orange' if a.priority=='Medium' else 'blue') }}">{{ a.priority }}</span>
+          <span class="badge badge-grey">{{ a.category }}</span>
+        </div>
+        {% if session.role in ('admin','hr') %}
+        <a href="{{ url_for('delete_announcement', aid=a.ann_id) }}"
+           onclick="return confirm('Remove this announcement?')"
+           class="btn btn-xs btn-red">Remove</a>
+        {% endif %}
+      </div>
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text);">{{ a.title }}</h3>
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px;">{{ a.body }}</p>
+      <div style="font-size:11px;color:var(--muted);">Posted by {{ a.created_by }} · {{ a.created_at[:10] if a.created_at else '—' }}</div>
+    </div>
+    {% else %}
+    <div class="chart-card" style="text-align:center;padding:40px;">
+      <p style="color:var(--muted);">No active announcements.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Admin: all announcements log -->
+  {% if session.role in ('admin','hr') %}
+  <div class="chart-card">
+    <div class="chart-header"><h3>All Announcements Log</h3></div>
+    {% for a in all_announcements %}
+    <div style="padding:8px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:500;">{{ a.title[:35] }}{% if a.title|length>35 %}...{% endif %}</div>
+        <span class="badge badge-{{ 'green' if a.is_active else 'red' }}">{{ 'Active' if a.is_active else 'Removed' }}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">{{ a.category }} · {{ a.created_by }}</div>
+    </div>
+    {% else %}
+    <p style="color:var(--muted);text-align:center;padding:20px;font-size:13px;">No announcements yet.</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Add Announcement Modal -->
+{% if session.role in ('admin','hr') %}
+<div class="modal-overlay" id="addAnnModal">
+  <div class="modal modal-wide" style="position:relative;">
+    <div class="ann-modal-banner">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">📢</div>
+        <div>
+          <div class="ann-modal-banner-title">Post New Announcement</div>
+          <div class="ann-modal-banner-sub">Broadcast a message to all employees</div>
+        </div>
+      </div>
+      <button class="ann-modal-close-btn" onclick="toggleModal('addAnnModal')">✕</button>
+    </div>
+    <form method="POST" action="{{ url_for('add_announcement') }}" style="padding:0 22px 20px;">
+      <div class="ann-section-label">Announcement Details</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Title <span style="color:var(--red)">*</span></label>
+        <input type="text" name="title" class="form-input" required placeholder="Announcement title...">
+      </div>
+      <div class="ann-section-label">Settings</div>
+      <div class="form-grid" style="margin-bottom:14px;">
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category" class="form-input">
+            <option>General</option><option>Payroll</option><option>Policy</option>
+            <option>Event</option><option>Holiday</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority" class="form-input">
+            <option>Normal</option><option>High</option><option>Medium</option>
+          </select>
+        </div>
+      </div>
+      <div class="ann-section-label">Message</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Full Message <span style="color:var(--red)">*</span></label>
+        <textarea name="body" class="form-input" rows="4" required placeholder="Full announcement message..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="toggleModal('addAnnModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Post Announcement
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% block scripts %}
+<script>
+  // Open modal if redirected from sidebar "Add Announcement" link
+  window.addEventListener('load', function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('open') === 'add') {
+      var modal = document.getElementById('addAnnModal');
+      if (modal) {
+        modal.classList.add('open');
+        // Clean URL
+        history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  });
+</script>
+{% endblock %}
+{% endblock %}

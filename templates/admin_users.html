@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<style>
+.um-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px; flex-wrap:wrap; gap:10px;
+}
+.um-header h2 { font-size:20px; font-weight:700; color:var(--text-1); margin:0; }
+.um-header p  { font-size:13px; color:var(--text-3); margin:4px 0 0; }
+
+/* Role badges */
+.role-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 12px; border-radius:20px;
+  font-size:11px; font-weight:700; letter-spacing:.04em;
+}
+.rb-admin    { background:#fdf0ee; color:#e85d42; }
+.rb-hr       { background:#eff6ff; color:#2563eb; }
+.rb-employee { background:#f0fdf4; color:#059669; }
+
+/* Status badge */
+.status-dot {
+  width:7px; height:7px; border-radius:50%; flex-shrink:0;
+  display:inline-block; margin-right:4px;
+}
+.sd-active   { background:#059669; }
+.sd-inactive { background:#dc2626; }
+
+/* User row card */
+.u-card {
+  background:var(--surface);
+  border:1px solid var(--border-light);
+  border-radius:12px;
+  padding:0;
+  overflow:hidden;
+  transition:box-shadow .15s;
+  margin-bottom:12px;
+}
+.u-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.u-card.inactive { opacity:.65; }
+
+.u-main {
+  display:grid;
+  grid-template-columns: 44px 1fr auto auto auto;
+  align-items:center;
+  gap:14px;
+  padding:14px 18px;
+}
+@media(max-width:800px){ .u-main{ grid-template-columns:44px 1fr; gap:10px; } }
+
+.u-avatar {
+  width:44px; height:44px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; font-weight:700; color:#fff; flex-shrink:0;
+}
+.av-admin { background:linear-gradient(135deg,#e85d42,#c94830); }
+.av-hr    { background:linear-gradient(135deg,#2563eb,#1d4ed8); }
+.av-emp   { background:linear-gradient(135deg,#059669,#047857); }
+
+.u-info-name   { font-size:14px; font-weight:600; color:var(--text-1); }
+.u-info-sub    { font-size:12px; color:var(--text-3); margin-top:2px; }
+.u-info-linked { font-size:11px; color:var(--brand); font-weight:600; margin-top:3px; }
+
+.u-actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+
+/* Expandable panel */
+.u-panel {
+  border-top:1px solid var(--border-light);
+  display:none;
+  padding:16px 18px;
+  background:var(--bg);
+  gap:20px;
+}
+.u-panel.open { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+@media(max-width:700px){ .u-panel.open{ grid-template-columns:1fr; } }
+
+.u-panel-section { }
+.u-panel-title {
+  font-size:10px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.07em; color:var(--text-3); margin-bottom:8px;
+  display:flex; align-items:center; gap:6px;
+}
+.u-panel-title::after { content:''; flex:1; height:1px; background:var(--border-light); }
+
+/* Inline form row */
+.inline-form { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.inline-form select, .inline-form input {
+  flex:1; min-width:0; padding:7px 10px;
+  border:1px solid var(--border-light); border-radius:8px;
+  font-size:13px; background:var(--surface); color:var(--text-1);
+  font-family:var(--font);
+}
+.inline-form select:focus, .inline-form input:focus {
+  outline:none; border-color:var(--brand);
+}
+
+/* Buttons */
+.btn-xs-brand {
+  padding:6px 14px; border-radius:8px; border:none; cursor:pointer;
+  font-size:12px; font-weight:600; font-family:var(--font);
+  background:var(--brand); color:#fff;
+  transition:background .15s, transform .1s;
+  white-space:nowrap;
+}
+.btn-xs-brand:hover { background:var(--brand-light); transform:translateY(-1px); }
+
+.btn-xs-outline {
+  padding:6px 12px; border-radius:8px; cursor:pointer;
+  font-size:12px; font-weight:600; font-family:var(--font);
+  background:transparent; color:var(--text-2);
+  border:1px solid var(--border-light);
+  transition:border-color .15s, color .15s;
+  white-space:nowrap; text-decoration:none; display:inline-block;
+}
+.btn-xs-outline:hover { border-color:var(--brand); color:var(--brand); }
+
+.btn-xs-danger {
+  padding:6px 12px; border-radius:8px; border:none; cursor:pointer;
+  font-size:12px; font-weight:600; font-family:var(--font);
+  background:#fee2e2; color:#dc2626;
+  transition:background .15s;
+  white-space:nowrap;
+}
+.btn-xs-danger:hover { background:#fca5a5; }
+
+/* Unlinked employees alert strip */
+.unlinked-strip {
+  background:#fffbeb; border:1px solid #fcd34d;
+  border-radius:10px; padding:12px 16px;
+  margin-bottom:20px; display:flex; align-items:flex-start; gap:10px;
+}
+.unlinked-strip .icon { font-size:18px; flex-shrink:0; }
+.unlinked-strip p { font-size:13px; color:#92400e; margin:0; line-height:1.5; }
+
+/* Stats row */
+.um-stats {
+  display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;
+}
+.um-stat {
+  background:var(--surface); border:1px solid var(--border-light);
+  border-radius:10px; padding:12px 18px;
+  display:flex; align-items:center; gap:10px;
+  flex:1; min-width:120px;
+}
+.um-stat-icon { font-size:20px; }
+.um-stat-num  { font-size:22px; font-weight:700; color:var(--text-1); line-height:1; }
+.um-stat-lbl  { font-size:11px; color:var(--text-3); font-weight:500; }
+</style>
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<div class="um-header">
+  <div>
+    <h2>👤 User Management</h2>
+    <p>Create accounts, assign roles, and manage access for your team.</p>
+  </div>
+  <button class="btn-xs-brand" onclick="toggleModal('createUserModal')"
+          style="padding:9px 20px;font-size:13px;">
+    + Create New User
+  </button>
+</div>
+
+<!-- ── Stats Row ──────────────────────────────────────────── -->
+<div class="um-stats">
+  {% set role_counts = {} %}
+  {% for u in users %}{% set _ = role_counts.update({u.role: (role_counts.get(u.role, 0) + 1)}) %}{% endfor %}
+  <div class="um-stat">
+    <div class="um-stat-icon">👥</div>
+    <div><div class="um-stat-num">{{ users|length }}</div><div class="um-stat-lbl">Total Users</div></div>
+  </div>
+  <div class="um-stat">
+    <div class="um-stat-icon" style="color:#e85d42;">🛡️</div>
+    <div><div class="um-stat-num">{{ users|selectattr('role','eq','admin')|list|length }}</div><div class="um-stat-lbl">Admins</div></div>
+  </div>
+  <div class="um-stat">
+    <div class="um-stat-icon" style="color:#2563eb;">👔</div>
+    <div><div class="um-stat-num">{{ users|selectattr('role','eq','hr')|list|length }}</div><div class="um-stat-lbl">HR Managers</div></div>
+  </div>
+  <div class="um-stat">
+    <div class="um-stat-icon" style="color:#059669;">🧑‍💼</div>
+    <div><div class="um-stat-num">{{ users|selectattr('role','eq','employee')|list|length }}</div><div class="um-stat-lbl">Employees</div></div>
+  </div>
+  <div class="um-stat">
+    <div class="um-stat-icon" style="color:#d97706;">⚠️</div>
+    <div><div class="um-stat-num">{{ unlinked_emps|length }}</div><div class="um-stat-lbl">Unlinked Staff</div></div>
+  </div>
+</div>
+
+<!-- ── Unlinked employees warning ─────────────────────────── -->
+{% if unlinked_emps %}
+<div class="unlinked-strip">
+  <div class="icon">⚠️</div>
+  <p>
+    <strong>{{ unlinked_emps|length }} employee(s) have no login account yet:</strong>
+    {{ unlinked_emps|map(attribute='name')|join(', ') }}.
+    Create accounts for them below so they can log in.
+  </p>
+</div>
+{% endif %}
+
+<!-- ── User Cards ─────────────────────────────────────────── -->
+{% for u in users %}
+<div class="u-card {% if u.status == 'Inactive' %}inactive{% endif %}">
+
+  <!-- Main row -->
+  <div class="u-main">
+
+    <!-- Avatar -->
+    <div class="u-avatar av-{{ u.role if u.role in ('admin','hr') else 'emp' }}">
+      {{ u.username[0]|upper }}
+    </div>
+
+    <!-- Info -->
+    <div>
+      <div class="u-info-name">
+        {{ u.username }}
+        {% if u.user_id == session.user_id %}
+          <span style="font-size:10px;background:#fdf0ee;color:#e85d42;padding:1px 7px;border-radius:10px;margin-left:4px;">You</span>
+        {% endif %}
+      </div>
+      <div class="u-info-sub">
+        {{ u.email or 'No email set' }}
+        &nbsp;·&nbsp;
+        <span class="status-dot sd-{{ 'active' if u.status != 'Inactive' else 'inactive' }}"></span>
+        {{ u.status or 'Active' }}
+      </div>
+      {% if u.emp_name %}
+      <div class="u-info-linked">🔗 {{ u.emp_name }} — {{ u.emp_position }} · {{ u.dept_name }}</div>
+      {% else %}
+      <div style="font-size:11px;color:var(--text-3);margin-top:3px;">— Not linked to any employee record</div>
+      {% endif %}
+    </div>
+
+    <!-- Role badge -->
+    <span class="role-badge rb-{{ u.role }}">
+      {{ '🛡️' if u.role=='admin' else ('👔' if u.role=='hr' else '🧑') }}
+      {{ u.role|title }}
+    </span>
+
+    <!-- Manage button -->
+    <button class="btn-xs-outline" onclick="togglePanel('panel-{{ u.user_id }}', this)">
+      Manage ▾
+    </button>
+
+    <!-- Delete -->
+    {% if u.user_id != session.user_id %}
+    <a href="{{ url_for('admin_delete_user', uid=u.user_id) }}"
+       onclick="return confirm('Delete user {{ u.username }}? This cannot be undone.')"
+       class="btn-xs-danger">Delete</a>
+    {% endif %}
+  </div>
+
+  <!-- Expandable panel -->
+  <div class="u-panel" id="panel-{{ u.user_id }}">
+
+    <!-- Change Role -->
+    <div class="u-panel-section">
+      <div class="u-panel-title">Change Role</div>
+      <form method="POST" action="{{ url_for('admin_change_role', uid=u.user_id) }}" class="inline-form">
+        <select name="role">
+          <option value="employee" {% if u.role=='employee' %}selected{% endif %}>🧑 Employee</option>
+          <option value="hr"       {% if u.role=='hr'       %}selected{% endif %}>👔 HR Manager</option>
+          <option value="admin"    {% if u.role=='admin'    %}selected{% endif %}>🛡️ Admin</option>
+        </select>
+        <button type="submit" class="btn-xs-brand">Update Role</button>
+      </form>
+      <p style="font-size:11px;color:var(--text-3);margin-top:6px;">
+        <strong>Employee</strong> — self-service portal only<br>
+        <strong>HR</strong> — manage staff, attendance, payroll<br>
+        <strong>Admin</strong> — full system access
+      </p>
+    </div>
+
+    <!-- Link Employee -->
+    <div class="u-panel-section">
+      <div class="u-panel-title">Link Employee Record</div>
+      <form method="POST" action="{{ url_for('admin_link_employee', uid=u.user_id) }}" class="inline-form">
+        <select name="employee_id" style="flex:1;">
+          <option value="">— No link (admin/HR account) —</option>
+          {% for e in all_emps %}
+          <option value="{{ e.employee_id }}" {% if e.employee_id == u.employee_id %}selected{% endif %}>
+            {{ e.name }} — {{ e.dept_name }}
+          </option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn-xs-brand">Save Link</button>
+      </form>
+      <p style="font-size:11px;color:var(--text-3);margin-top:6px;">
+        Linking connects this login to an employee's payslip, attendance, and CL records.
+      </p>
+    </div>
+
+    <!-- Reset Password + Activate/Deactivate -->
+    <div class="u-panel-section">
+      <div class="u-panel-title">Security</div>
+      <form method="POST" action="{{ url_for('admin_reset_user_password', uid=u.user_id) }}" class="inline-form" style="margin-bottom:10px;">
+        <input type="text" name="new_password" placeholder="Set new password (min 6 chars)" minlength="6">
+        <button type="submit" class="btn-xs-brand">Reset</button>
+      </form>
+      {% if u.user_id != session.user_id %}
+      <a href="{{ url_for('admin_toggle_user_status', uid=u.user_id) }}"
+         onclick="return confirm('{{ 'Deactivate' if u.status != 'Inactive' else 'Reactivate' }} {{ u.username }}?')"
+         class="btn-xs-outline"
+         style="color:{% if u.status == 'Inactive' %}#059669{% else %}#dc2626{% endif %};border-color:{% if u.status == 'Inactive' %}#059669{% else %}#dc2626{% endif %};">
+        {% if u.status == 'Inactive' %}✅ Reactivate{% else %}🚫 Deactivate{% endif %}
+      </a>
+      {% endif %}
+      <p style="font-size:11px;color:var(--text-3);margin-top:6px;">
+        Deactivated users cannot log in until reactivated.
+      </p>
+    </div>
+
+  </div>
+</div>
+{% endfor %}
+
+<!-- ── Create User Modal ───────────────────────────────────── -->
+<div class="modal-overlay" id="createUserModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Create New User Account</h3>
+      <button class="modal-close" onclick="toggleModal('createUserModal')">✕</button>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_create_user') }}">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Username <span style="color:var(--brand)">*</span></label>
+          <input type="text" name="username" class="form-input" required
+                 placeholder="e.g. priya_hr" autocomplete="off">
+          <div style="font-size:11px;color:var(--text-3);margin-top:4px;">Lowercase, no spaces. Used to log in.</div>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" class="form-input"
+                 placeholder="e.g. priya@company.com">
+        </div>
+        <div class="form-group">
+          <label>Password <span style="color:var(--brand)">*</span></label>
+          <input type="text" name="password" class="form-input" required
+                 placeholder="Temporary password (share with user)" minlength="6">
+        </div>
+        <div class="form-group">
+          <label>Role <span style="color:var(--brand)">*</span></label>
+          <select name="role" class="form-input" id="createRoleSel" onchange="updateRoleHint()">
+            <option value="employee">🧑 Employee — self-service portal</option>
+            <option value="hr">👔 HR Manager — manage staff, payroll</option>
+            <option value="admin">🛡️ Admin — full system access</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Link to Employee Record <span style="color:var(--text-3);font-weight:400;">(optional for Admin/HR)</span></label>
+          <select name="employee_id" class="form-input">
+            <option value="">— Admin / HR account (no employee link needed) —</option>
+            {% for e in unlinked_emps %}
+            <option value="{{ e.employee_id }}">
+              {{ e.name }} — {{ e.position }} · {{ e.dept_name }}
+            </option>
+            {% endfor %}
+            {% if unlinked_emps %}
+            <optgroup label="── Already linked (for reassignment) ──">
+            {% endif %}
+            {% for e in all_emps %}
+              {% if e not in unlinked_emps %}
+              <option value="{{ e.employee_id }}" style="color:var(--text-3);">
+                {{ e.name }} — {{ e.dept_name }} (already linked)
+              </option>
+              {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Role description hint -->
+      <div id="roleHint" style="background:var(--bg);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--text-2);border-left:3px solid var(--brand);">
+        <strong>Employee:</strong> Can view own attendance, apply for leave, check payslip, and view performance reviews.
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="toggleModal('createUserModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Account →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePanel(id, btn) {
+  const panel = document.getElementById(id);
+  const isOpen = panel.classList.contains('open');
+  // Close all open panels first
+  document.querySelectorAll('.u-panel.open').forEach(p => {
+    p.classList.remove('open');
+  });
+  document.querySelectorAll('.btn-xs-outline').forEach(b => {
+    if (b.textContent.includes('▴')) b.textContent = b.textContent.replace('▴','▾');
+  });
+  if (!isOpen) {
+    panel.classList.add('open');
+    btn.textContent = btn.textContent.replace('▾','▴');
+  }
+}
+
+const roleHints = {
+  employee: '<strong>Employee:</strong> Can view own attendance, apply for leave, check payslip, and see their own performance reviews. Cannot access HR features.',
+  hr: '<strong>HR Manager:</strong> Can manage all employees, mark attendance, calculate payroll, approve/reject leaves, send emails, and view all reports.',
+  admin: '<strong>Admin:</strong> Full system access. Everything HR can do, plus user management, role assignment, and system configuration.'
+};
+
+function updateRoleHint() {
+  const role = document.getElementById('createRoleSel').value;
+  document.getElementById('roleHint').innerHTML = roleHints[role] || '';
+}
+</script>
+{% endblock %}

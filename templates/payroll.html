@@ -1,0 +1,637 @@
+{% extends "base.html" %}
+{% block title %}Payroll{% endblock %}
+{% block page_title %}Payroll{% endblock %}
+
+{% block content %}
+<style>
+/* ── Google Font ─────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── Reset scope ─────────────────────────────────────────────────────── */
+.payroll-root * { box-sizing: border-box; }
+.payroll-root {
+  font-family: 'DM Sans', sans-serif;
+  color: #18181b;
+}
+
+/* ── Page header row: filter + KPIs side by side ─────────────────────── */
+.payroll-header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 20px;
+}
+
+/* ── Filter panel ────────────────────────────────────────────────────── */
+.filter-panel {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  min-width: 260px;
+}
+.filter-panel-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a0a0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.filter-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filter-select {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #18181b;
+  background: #f6f6f9;
+  border: 1px solid #e4e4ec;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+.filter-select:focus { border-color: #7F77DD; }
+.btn-calculate {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  background: #18181b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  white-space: nowrap;
+}
+.btn-calculate:hover { background: #333; }
+.btn-calculate:active { transform: scale(0.97); }
+
+/* ── KPI strip ───────────────────────────────────────────────────────── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.kpi-card {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-radius: 14px;
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 90px;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
+  border-radius: 14px 14px 0 0;
+}
+.kpi-card.kpi-purple::before { background: linear-gradient(90deg,#7F77DD,#a89cf7); }
+.kpi-card.kpi-green::before  { background: linear-gradient(90deg,#1D9E75,#34c898); }
+.kpi-card.kpi-red::before    { background: linear-gradient(90deg,#D85A30,#f07a55); }
+.kpi-card.kpi-blue::before   { background: linear-gradient(90deg,#378ADD,#61aaee); }
+.kpi-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #a0a0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 6px;
+}
+.kpi-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: #18181b;
+  line-height: 1;
+}
+.kpi-value.big { font-size: 19px; }
+.kpi-sub {
+  font-size: 11px;
+  color: #b0b0be;
+  margin-top: 5px;
+}
+.kpi-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 6px;
+  letter-spacing: 0.03em;
+}
+.badge-green-soft  { background: #e3f7f0; color: #0e7a5a; }
+.badge-orange-soft { background: #fff0e0; color: #9a5b0d; }
+.badge-red-soft    { background: #fdecea; color: #aa2e1a; }
+
+/* ── Section title ───────────────────────────────────────────────────── */
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0a0b0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+}
+
+/* ── Chart grid ──────────────────────────────────────────────────────── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.chart-card {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.chart-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #18181b;
+  margin-bottom: 2px;
+}
+.chart-card-sub {
+  font-size: 11px;
+  color: #b0b0be;
+  margin-bottom: 16px;
+}
+.chart-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 200px;
+}
+
+/* ── Dept bar inline legend ──────────────────────────────────────────── */
+.dept-inline-legend {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.dept-inline-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #666;
+}
+.dept-dot {
+  width: 10px; height: 10px;
+  border-radius: 3px;
+}
+
+/* ── Table card ──────────────────────────────────────────────────────── */
+.table-card {
+  background: #fff;
+  border: 1px solid #e8e8ec;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.table-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0f0f4;
+}
+.table-topbar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #18181b;
+}
+.table-topbar-meta {
+  font-size: 11px;
+  color: #b0b0be;
+}
+.payroll-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.payroll-table thead th {
+  padding: 9px 20px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  color: #b0b0be;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f4;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+}
+.payroll-table thead th.right { text-align: right; }
+.payroll-table tbody td {
+  padding: 12px 20px;
+  border-bottom: 1px solid #f5f5f8;
+  color: #18181b;
+  vertical-align: middle;
+}
+.payroll-table tbody td.right { text-align: right; }
+.payroll-table tbody tr:last-child td { border-bottom: none; }
+.payroll-table tbody tr:hover td { background: #fafafa; }
+
+/* employee cell */
+.emp-cell { display: flex; align-items: center; gap: 10px; }
+.emp-avatar {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  color: #fff;
+}
+.emp-name { font-weight: 600; font-size: 13px; color: #18181b; }
+.emp-id   { font-size: 11px; color: #b0b0be; font-family: 'DM Mono', monospace; }
+
+.dept-tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: #f0f0f6;
+  color: #5a5a80;
+  white-space: nowrap;
+}
+
+.mono { font-family: 'DM Mono', monospace; font-size: 13px; }
+.deduction-val { color: #D85A30; }
+.net-val { color: #0e7a5a; font-weight: 600; }
+
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.status-pill.paid   { background: #e3f7f0; color: #0e7a5a; }
+.status-pill.unpaid { background: #fff0e0; color: #9a5b0d; }
+.status-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+}
+.status-pill.paid .status-dot   { background: #1D9E75; }
+.status-pill.unpaid .status-dot { background: #BA7517; }
+
+/* total row */
+.total-row td {
+  background: #fafafa;
+  border-top: 2px solid #e8e8ec !important;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 13px 20px !important;
+}
+.total-row td.right { text-align: right; }
+
+.empty-row {
+  text-align: center;
+  color: #c0c0cc;
+  padding: 36px !important;
+  font-size: 13px;
+}
+
+/* ── Salary bar (inline viz) ─────────────────────────────────────────── */
+.salary-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.salary-bar-track {
+  flex: 1;
+  height: 5px;
+  background: #f0f0f4;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.salary-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #7F77DD, #a89cf7);
+}
+
+/* ── Avatar colors ───────────────────────────────────────────────────── */
+.av-0 { background: #7F77DD; }
+.av-1 { background: #1D9E75; }
+.av-2 { background: #D85A30; }
+.av-3 { background: #378ADD; }
+.av-4 { background: #BA7517; }
+.av-5 { background: #D4537E; }
+
+.btn-create-payroll {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: #f0f0ff;
+  color: #4f46e5;
+  border: 1px solid #c7c4f8;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s, box-shadow .15s;
+}
+.btn-create-payroll:hover {
+  background: #e0dffe;
+  box-shadow: 0 2px 8px rgba(79,70,229,.15);
+}
+</style>
+
+<div class="payroll-root">
+
+<!-- ── Page Header: Filter + KPIs ─────────────────────────────────────── -->
+<div class="payroll-header">
+
+  <!-- Filter panel -->
+  <div class="filter-panel">
+    <div class="filter-panel-label">Pay Period</div>
+    <form method="POST" class="filter-controls">
+      <select name="month" class="filter-select" style="width:130px;">
+        {% for m in months %}
+        <option value="{{ loop.index }}" {% if loop.index==month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+      <select name="year" class="filter-select" style="width:88px;">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y==year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-calculate">Run Payroll →</button>
+    </form>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpi-strip">
+
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-label">Total disbursed</div>
+      <div class="kpi-value big">{% if summary %}₹{{ "{:,.0f}".format(total) }}{% else %}—{% endif %}</div>
+      <div class="kpi-sub">{{ month_name }} {{ year }}</div>
+    </div>
+
+    <div class="kpi-card kpi-green">
+      <div class="kpi-label">Employees paid</div>
+      <div class="kpi-value">{{ summary|selectattr('payment_status','equalto','Paid')|list|length if summary else '—' }}</div>
+      {% if summary %}
+      <span class="kpi-badge badge-green-soft">of {{ summary|length }} total</span>
+      {% endif %}
+    </div>
+
+    <div class="kpi-card kpi-red">
+      <div class="kpi-label">Total deductions</div>
+      <div class="kpi-value big">{% if summary %}₹{{ "{:,.0f}".format(summary|sum(attribute='deductions')) }}{% else %}—{% endif %}</div>
+      <div class="kpi-sub">across all employees</div>
+    </div>
+
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-label">Avg net salary</div>
+      <div class="kpi-value big">
+        {% if summary and summary|length > 0 %}
+          ₹{{ "{:,.0f}".format(total / summary|length) }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="kpi-sub">per employee</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Charts ──────────────────────────────────────────────────────────── -->
+<div class="charts-grid">
+
+  <!-- Dept bar -->
+  <div class="chart-card">
+    <div class="chart-card-title">Salary cost by department</div>
+    <div class="chart-card-sub">Net salaries disbursed this period</div>
+    <div class="chart-canvas-wrap">
+      <canvas id="deptBar"></canvas>
+    </div>
+  </div>
+
+  <!-- Trend line -->
+  <div class="chart-card">
+    <div class="chart-card-title">Monthly payroll trend — {{ year }}</div>
+    <div class="chart-card-sub">Total net payroll per month (₹)</div>
+    <div class="chart-canvas-wrap">
+      <canvas id="trendLine"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Payroll Table ───────────────────────────────────────────────────── -->
+<div class="table-card">
+  <div class="table-topbar">
+    <div class="table-topbar-title">Payroll breakdown — {{ month_name }} {{ year }}</div>
+    {% if summary %}
+    <div class="table-topbar-meta">{{ summary|length }} employees · ₹{{ "{:,.0f}".format(total) }} total</div>
+    {% endif %}
+  </div>
+  <table class="payroll-table" id="payrollTable">
+    <thead>
+      <tr>
+        <th>Employee</th>
+        <th>Department</th>
+        <th class="right">Basic pay</th>
+        <th class="right">Deductions</th>
+        <th>Net salary</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set max_net = namespace(val=1) %}
+      {% if summary %}
+        {% for r in summary %}
+          {% if r.net_salary > max_net.val %}{% set max_net.val = r.net_salary %}{% endif %}
+        {% endfor %}
+      {% endif %}
+
+      {% for r in summary %}
+      <tr>
+        <td>
+          <div class="emp-cell">
+            <div class="emp-avatar av-{{ loop.index0 % 6 }}">{{ r.name[0] }}</div>
+            <div>
+              <div class="emp-name">{{ r.name }}</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="dept-tag">{{ r.dept_name }}</span></td>
+        <td class="right mono">₹{{ "{:,.0f}".format(r.basic_pay) }}</td>
+        <td class="right mono deduction-val">−₹{{ "{:,.0f}".format(r.deductions) }}</td>
+        <td>
+          <div class="salary-bar-wrap">
+            <span class="mono net-val">₹{{ "{:,.0f}".format(r.net_salary) }}</span>
+            <div class="salary-bar-track">
+              <div class="salary-bar-fill" style="width:{{ (r.net_salary / max_net.val * 100)|round }}%"></div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="status-pill {{ 'paid' if r.payment_status=='Paid' else 'unpaid' }}">
+            <span class="status-dot"></span>{{ r.payment_status }}
+          </span>
+        </td>
+        <td>
+          <a href="{{ url_for('view_payroll', month=month, year=year) }}"
+             class="btn-create-payroll">Create Payroll</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="empty-row">Click "Run Payroll →" to generate payroll for this period.</td></tr>
+      {% endfor %}
+
+      {% if summary %}
+      <tr class="total-row">
+        <td colspan="2"><strong>Total</strong></td>
+        <td class="right mono">₹{{ "{:,.0f}".format(summary|sum(attribute='basic_pay')) }}</td>
+        <td class="right mono deduction-val">−₹{{ "{:,.0f}".format(summary|sum(attribute='deductions')) }}</td>
+        <td colspan="3"><span class="mono net-val">₹{{ "{:,.0f}".format(total) }}</span></td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+</div><!-- /payroll-root -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+const deptData = {{ dept_data|safe }};
+const trend    = {{ trend|safe }};
+
+/* ── Dept bar ──────────────────────────────────────────────────────────── */
+const deptColors = ['#7F77DD','#1D9E75','#BA7517','#D4537E','#378ADD','#D85A30'];
+
+const topLabelPlugin = {
+  id: 'topLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, di) => {
+      const meta = chart.getDatasetMeta(di);
+      meta.data.forEach((bar, i) => {
+        const val = ds.data[i];
+        if (!val) return;
+        ctx.save();
+        ctx.font = "500 11px 'DM Sans', sans-serif";
+        ctx.fillStyle = '#888';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('₹' + Number(val).toLocaleString('en-IN'), bar.x, bar.y - 4);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+new Chart(document.getElementById('deptBar'), {
+  type: 'bar',
+  plugins: [topLabelPlugin],
+  data: {
+    labels: deptData.map(d => d.dept_name),
+    datasets: [{
+      label: 'Net Salary (₹)',
+      data: deptData.map(d => d.total),
+      backgroundColor: deptData.map((_, i) => deptColors[i % deptColors.length]),
+      borderRadius: 7,
+      borderSkipped: false
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 22 } },
+    plugins: { legend: { display: false } },
+    scales: {
+      y: {
+        ticks: { callback: v => '₹' + v.toLocaleString('en-IN'), font: { size: 11, family: 'DM Mono' } },
+        grid: { color: '#f4f4f7' }
+      },
+      x: {
+        ticks: { font: { size: 12, family: 'DM Sans' } },
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+/* ── Trend line ────────────────────────────────────────────────────────── */
+/* Fill zero months so chart never looks "broken" */
+const allMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const trendMap = {};
+trend.forEach(t => { trendMap[t.month] = t.total; });
+const filledLabels = allMonths;
+const filledData   = allMonths.map(m => trendMap[m] || 0);
+const hasData = filledData.some(v => v > 0);
+
+new Chart(document.getElementById('trendLine'), {
+  type: 'line',
+  data: {
+    labels: filledLabels,
+    datasets: [{
+      label: 'Net Payroll',
+      data: filledData,
+      borderColor: '#378ADD',
+      backgroundColor: (ctx) => {
+        const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, 'rgba(55,138,221,0.18)');
+        gradient.addColorStop(1, 'rgba(55,138,221,0.00)');
+        return gradient;
+      },
+      borderWidth: 2.5,
+      pointBackgroundColor: ctx => filledData[ctx.dataIndex] > 0 ? '#fff' : 'transparent',
+      pointBorderColor:     ctx => filledData[ctx.dataIndex] > 0 ? '#378ADD' : 'transparent',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      tension: 0.4,
+      fill: true
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 10 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.raw > 0 ? '₹' + ctx.raw.toLocaleString('en-IN') : 'No data'
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: v => v === 0 ? '₹0' : '₹' + v.toLocaleString('en-IN'),
+          font: { size: 11, family: 'DM Mono' }
+        },
+        grid: { color: '#f4f4f7' }
+      },
+      x: {
+        ticks: { font: { size: 11, family: 'DM Sans' } },
+        grid: { display: false }
+      }
+    }
+  }
+});
+</script>
+{% endblock %}
