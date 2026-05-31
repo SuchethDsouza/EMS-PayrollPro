@@ -5,9 +5,9 @@
 {% block content %}
 
 <!-- ── Compact Monthly Summary Stats ─────────────────────────────────────── -->
-<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
 
-  <div class="stat-card stat-green" style="flex:1;min-width:130px;padding:14px 16px;">
+  <div class="stat-card stat-green" style="padding:14px 16px;">
     <div class="stat-icon" style="font-size:20px;">✅</div>
     <div class="stat-body">
       <div class="stat-value" style="font-size:20px;">{{ monthly_stats.present }}</div>
@@ -15,7 +15,7 @@
     </div>
   </div>
 
-  <div class="stat-card stat-red" style="flex:1;min-width:130px;padding:14px 16px;">
+  <div class="stat-card stat-red" style="padding:14px 16px;">
     <div class="stat-icon" style="font-size:20px;">❌</div>
     <div class="stat-body">
       <div class="stat-value" style="font-size:20px;">{{ monthly_stats.absent }}</div>
@@ -23,7 +23,7 @@
     </div>
   </div>
 
-  <div class="stat-card stat-orange" style="flex:1;min-width:130px;padding:14px 16px;">
+  <div class="stat-card stat-orange" style="padding:14px 16px;">
     <div class="stat-icon" style="font-size:20px;">🌿</div>
     <div class="stat-body">
       <div class="stat-value" style="font-size:20px;">{{ monthly_stats.on_leave }}</div>
@@ -31,7 +31,7 @@
     </div>
   </div>
 
-  <div class="stat-card stat-purple" style="flex:1;min-width:130px;padding:14px 16px;">
+  <div class="stat-card stat-purple" style="padding:14px 16px;">
     <div class="stat-icon" style="font-size:20px;">📊</div>
     <div class="stat-body">
       <div class="stat-value" style="font-size:20px;">{{ monthly_stats.att_pct }}%</div>
@@ -39,27 +39,21 @@
     </div>
   </div>
 
-  <div class="stat-card stat-blue" style="flex:1;min-width:130px;padding:14px 16px;">
-    <div class="stat-icon" style="font-size:20px;">📅</div>
-    <div class="stat-body">
-      <div class="stat-value" style="font-size:20px;">{{ monthly_stats.total }}</div>
-      <div class="stat-label">Weekday Activity</div><div class="stat-sublabel">Mon–Fri records this month</div>
-    </div>
-  </div>
 
-  <!-- Export Button card -->
-  {% if session.role in ('admin','hr') %}
-  <div style="flex:1;min-width:130px;display:flex;flex-direction:column;gap:6px;justify-content:center;">
-    <a id="exportBtn"
-       href="{{ url_for('attendance_export_excel', month=now.month, year=now.year) }}"
-       class="btn btn-primary"
-       style="background:#1D9E75;text-align:center;font-size:13px;padding:10px 14px;">
-      ⬇ Export Excel
-    </a>
-  </div>
-  {% endif %}
 
 </div>
+
+<!-- Export Button -->
+{% if session.role in ('admin','hr') %}
+<div style="display:flex;justify-content:flex-end;margin:-8px 0 14px;">
+  <a id="exportBtn"
+     href="{{ url_for('attendance_export_excel', month=now.month, year=now.year) }}"
+     class="btn btn-primary"
+     style="background:#1D9E75;font-size:13px;padding:8px 16px;">
+    ⬇ Export Excel
+  </a>
+</div>
+{% endif %}
 
 <!-- ── Filter Bar ─────────────────────────────────────────────────────────── -->
 <div class="filter-bar" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px;">
