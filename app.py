@@ -307,7 +307,38 @@ def register():
                 )
                 conn.commit()
                 conn.close()
-                flash("✅ Admin account created! You can now sign in.", "success")
+
+                # ── Send welcome email with credentials to new admin ──────────
+                login_url  = "http://127.0.0.1:5000/login"
+                email_body = (
+                    f"Welcome to PayrollPro!\n\n"
+                    f"Your Admin account has been created successfully. "
+                    f"Please keep these credentials confidential.\n\n"
+                    f"{'─'*38}\n"
+                    f"  Username  :  {username}\n"
+                    f"  Password  :  {password}\n"
+                    f"  Role      :  Admin (Company Owner)\n"
+                    f"{'─'*38}\n\n"
+                    f"Login at: {login_url}\n\n"
+                    f"As Admin you can:\n"
+                    f"• Add departments and HR executives\n"
+                    f"• Manage employees, payroll, and attendance\n"
+                    f"• Access all analytics and reports\n\n"
+                    f"For security, please change your password after first login:\n"
+                    f"My Profile → Change Password"
+                )
+                try:
+                    send_email(
+                        recipient_email=email,
+                        recipient_name=full_name or username,
+                        subject="Your PayrollPro Admin Account Credentials",
+                        body=email_body,
+                        sender_name="PayrollPro System"
+                    )
+                except Exception:
+                    pass  # Don't block registration if email fails
+
+                flash("✅ Admin account created! Check your email for login credentials.", "success")
                 return redirect(url_for("login"))
 
     return render_template("register.html", error=error, blocked=False)
