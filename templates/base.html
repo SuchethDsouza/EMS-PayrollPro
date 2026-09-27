@@ -814,21 +814,88 @@
     .filter-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px; }
 
     /* ═══════════════════════════════════════════════════════
+       MOBILE NAV — hamburger + off-canvas drawer
+    ═══════════════════════════════════════════════════════ */
+    .hamburger-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .hamburger-btn:active { background: var(--bg); }
+    .mobile-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,25,35,.5);
+      z-index: 190;
+      opacity: 0;
+      transition: opacity var(--anim);
+    }
+    .mobile-backdrop.open { display: block; opacity: 1; }
+
+    /* ═══════════════════════════════════════════════════════
        RESPONSIVE
     ═══════════════════════════════════════════════════════ */
     @media (max-width: 768px) {
-      .sidebar { width: var(--sidebar-w-sm); }
-      .sidebar .sb-label,
-      .sidebar .sb-brand-text,
-      .sidebar .sb-user-info,
-      .sidebar .sb-section-label { display: none; }
-      .sidebar .sb-item,
-      .sidebar .sb-group-header { justify-content: center; padding: 9px; margin: 1px 6px; }
-      .sidebar .sb-chevron { display: none; }
-      .sidebar .sb-submenu { display: none; }
-      .main-wrap { margin-left: var(--sidebar-w-sm); }
+      .hamburger-btn { display: flex; }
+      .sb-toggle { display: none; } /* desktop icon-rail collapse replaced by the drawer on mobile */
+
+      /* Sidebar becomes a full off-canvas drawer, not a shrunk icon rail,
+         so every nav link (including accordion sub-items) stays reachable. */
+      .sidebar {
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform var(--anim);
+        box-shadow: none;
+      }
+      .sidebar.mobile-open { transform: translateX(0); box-shadow: 12px 0 32px rgba(0,0,0,.25); }
+
+      /* Neutralize the desktop "collapsed" (icon-only) look while on mobile —
+         a drawer should always show full labels and open submenus. */
+      .sidebar.collapsed { width: 260px; }
+      .sidebar.collapsed .sb-label,
+      .sidebar.collapsed .sb-brand-text,
+      .sidebar.collapsed .sb-section-label { opacity: 1; width: auto; padding: inherit; pointer-events: auto; }
+      .sidebar.collapsed .sb-item,
+      .sidebar.collapsed .sb-group-header { justify-content: flex-start; padding: 9px 14px; margin: 1px 8px; }
+      .sidebar.collapsed .sb-item::after,
+      .sidebar.collapsed .sb-group-header::after { content: none; }
+      .sidebar.collapsed .sb-chevron,
+      .sidebar.collapsed .sb-group-header .sb-chevron { display: block; }
+      .sidebar.collapsed .sb-submenu,
+      .sidebar .sb-submenu { display: block; } /* was "display:none" — this hid every sub-item on mobile */
+
+      .main-wrap, body.sb-collapsed .main-wrap { margin-left: 0; }
       .page-content { padding: 16px; }
       .charts-row { flex-direction: column; }
+
+      /* Topbar: drop the date pill so the page title has room and doesn't wrap/clip */
+      .topbar { padding: 0 14px; gap: 10px; }
+      .topbar-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .topbar-date-pill { display: none; }
+
+      /* Data tables: scroll horizontally inside their card instead of being
+         clipped or squeezed illegible-thin (covers table-card, em-table-card,
+         at-table-card and any page-specific "*table-card*" wrapper). */
+      [class*="table-card"] { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .page-content table { min-width: 600px; }
+
+      .stats-grid, .stat-grid { grid-template-columns: 1fr 1fr; }
+      .profile-layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .page-content { padding: 12px; }
+      .stats-grid, .stat-grid { grid-template-columns: 1fr; }
+      .topbar-title { font-size: 15px; }
+      .modal-overlay { padding: 12px; }
+      .page-content table { min-width: 520px; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -1173,6 +1240,9 @@
 
 </aside>
 
+<!-- Mobile drawer backdrop -->
+<div class="mobile-backdrop" id="mobileBackdrop" onclick="closeMobileSidebar()"></div>
+
 <!-- ── Main content ──────────────────────────────────────────────────── -->
 <div class="main-wrap" id="mainWrap">
 
@@ -1193,6 +1263,11 @@
 
   <!-- Topbar -->
   <header class="topbar">
+    <button class="hamburger-btn" onclick="toggleMobileSidebar()" aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
     <div class="topbar-badge"></div>
     <h1 class="topbar-title">{% block page_title %}PayrollPro{% endblock %}</h1>
     <div class="topbar-date-pill">
@@ -1272,11 +1347,39 @@
     localStorage.setItem(PREF_KEY, collapsed ? '1' : '0');
   }
 
-  // Restore pref
-  if (localStorage.getItem(PREF_KEY) === '1') {
+  // Restore pref (desktop icon-rail collapse only — irrelevant on mobile, where
+  // the sidebar is an off-canvas drawer instead)
+  if (window.innerWidth > 768 && localStorage.getItem(PREF_KEY) === '1') {
     sidebar.classList.add('collapsed');
     body.classList.add('sb-collapsed');
   }
+
+  /* ── Mobile drawer ─────────────────────────────────────────── */
+  const mobileBackdrop = document.getElementById('mobileBackdrop');
+
+  function toggleMobileSidebar() {
+    sidebar.classList.toggle('mobile-open');
+    mobileBackdrop.classList.toggle('open');
+  }
+
+  function closeMobileSidebar() {
+    sidebar.classList.remove('mobile-open');
+    mobileBackdrop.classList.remove('open');
+  }
+
+  // Tapping an actual nav link closes the drawer; tapping a group header
+  // (which only expands/collapses a submenu) should not.
+  document.querySelectorAll('.sidebar a').forEach(a => {
+    a.addEventListener('click', () => {
+      if (window.innerWidth <= 768) closeMobileSidebar();
+    });
+  });
+
+  // If the window is resized from mobile to desktop width, make sure the
+  // drawer state doesn't linger.
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeMobileSidebar();
+  });
 
   /* ── Stat Drawer ───────────────────────────────────────────── */
   function openDrawer(statType, title) {
