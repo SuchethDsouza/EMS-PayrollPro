@@ -7,8 +7,8 @@ from database import get_connection
 # ── Configure your Gmail credentials here ──────────────────────────────────
 SMTP_HOST     = "smtp.gmail.com"
 SMTP_PORT     = 587
-SENDER_EMAIL  = "suchethdsouzas275@gmail.com"   # ← Replace with your Gmail
-SENDER_PASS   = "nknv sjpe igmc vopq"          # ← Replace with Gmail App Password
+SENDER_EMAIL  = ""   # ← Replace with your Gmail
+SENDER_PASS   = ""          # ← Replace with Gmail App Password
 # ──────────────────────────────────────────────────────────────────────────
 
 def send_email(recipient_email, recipient_name, subject, body, sender_name="HR Team"):
